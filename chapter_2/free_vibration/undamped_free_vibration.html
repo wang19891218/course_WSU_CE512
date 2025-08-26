@@ -78,7 +78,9 @@
             border: 2px solid #333;
             border-radius: 5px;
             display: block;
-            margin: 0 auto;
+            width: 100%;
+            height: auto;
+            max-height: calc(100% - 60px); /* Account for speed control height */
         }
         .chart-container {
             position: relative;
@@ -214,14 +216,13 @@
         
         <!-- Bottom Left: Mass-Spring Animation -->
         <div class="box">
-            <h2>Mass-Spring System</h2>
             <div class="control-group">
                 <label for="speed">Playback Speed:</label>
                 <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
                 <input type="number" id="speed-value" min="0.1" max="3" step="0.1" value="1">
                 <span style="font-size: 12px; color: #666;">×</span>
             </div>
-            <canvas id="animationCanvas" class="animation-canvas" width="400" height="280"></canvas>
+            <canvas id="animationCanvas" class="animation-canvas"></canvas>
         </div>
         
         <!-- Bottom Right: Time History Plot -->
@@ -258,17 +259,19 @@
         let positionData = [];
         
         function initChart() {
+            console.log('Initializing chart...');
             if (timeHistoryChart) {
                 timeHistoryChart.destroy();
             }
             
+            console.log('Creating chart with data:', { labels: timeData, data: positionData });
             timeHistoryChart = new Chart(chartCtx, {
                 type: 'line',
                 data: {
-                    labels: timeData,
+                    labels: [...timeData],
                     datasets: [{
                         label: 'Position u(t)',
-                        data: positionData,
+                        data: [...positionData],
                         borderColor: '#0066cc',
                         backgroundColor: 'rgba(0, 102, 204, 0.1)',
                         borderWidth: 2,
@@ -289,7 +292,19 @@
                                 text: 'Time (s)'
                             },
                             min: 0,
-                            max: historyMaxTime
+                            max: historyMaxTime,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    const period = 2 * Math.PI / omega;
+                                    if (value === 0) return '0';
+                                    if (Math.abs(value - period) < 0.01) return 'T';
+                                    if (Math.abs(value - 2*period) < 0.01) return '2T';
+                                    if (Math.abs(value - 3*period) < 0.01) return '3T';
+                                    if (Math.abs(value - 4*period) < 0.01) return '4T';
+                                    if (Math.abs(value - 5*period) < 0.01) return '5T';
+                                    return value.toFixed(1);
+                                }
+                            }
                         },
                         y: {
                             title: {
@@ -318,7 +333,7 @@
             // Update max times based on new frequency
             const period = 2 * Math.PI / omega;
             animationMaxTime = 4 * period; // 4 cycles for animation
-            historyMaxTime = 5 * period;   // 5 cycles for time history
+            historyMaxTime = 5 * period;   // 5 cycles for time history (always 5 times the period)
         }
 
         // Update displays
@@ -585,6 +600,21 @@
                 if (!canvas) {
                     throw new Error('Canvas element not found');
                 }
+                
+                // Set canvas size dynamically
+                const resizeCanvas = () => {
+                    const container = canvas.parentElement;
+                    const rect = container.getBoundingClientRect();
+                    const speedControl = container.querySelector('.control-group');
+                    const speedControlHeight = speedControl ? speedControl.offsetHeight + 20 : 60;
+                    
+                    canvas.width = rect.width - 30; // Account for padding
+                    canvas.height = rect.height - speedControlHeight - 30; // Account for padding and speed control
+                };
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                
                 ctx = canvas.getContext('2d');
                 
                 chartCtx = document.getElementById('timeHistoryChart');
@@ -593,9 +623,25 @@
                 }
                 chartCtx = chartCtx.getContext('2d');
                 
+                // Initialize with first data point before creating chart
+                calculateOmega(); // Make sure omega is calculated
+                const initialPosition = calculatePosition(0);
+                timeData.push(0);
+                positionData.push(initialPosition);
+                console.log('Initial data:', { time: 0, position: initialPosition, omega: omega });
+                
                 initChart();
                 updateDisplays();
                 setupControls();
+                
+                console.log('Chart created, updating with initial data...');
+                if (timeHistoryChart) {
+                    timeHistoryChart.data.labels = [0];
+                    timeHistoryChart.data.datasets[0].data = [initialPosition];
+                    timeHistoryChart.update('none');
+                    console.log('Chart updated with initial data');
+                }
+                
                 drawMassSpring();
                 animate();
                 console.log('App initialized successfully');
