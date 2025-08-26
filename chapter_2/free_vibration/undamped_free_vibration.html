@@ -325,11 +325,11 @@
                                 callback: function(value, index, values) {
                                     const period = 2 * Math.PI / omega;
                                     if (value === 0) return '0';
-                                    if (Math.abs(value - period) < 0.01) return 'T';
-                                    if (Math.abs(value - 2*period) < 0.01) return '2T';
-                                    if (Math.abs(value - 3*period) < 0.01) return '3T';
-                                    if (Math.abs(value - 4*period) < 0.01) return '4T';
-                                    if (Math.abs(value - 5*period) < 0.01) return '5T';
+                                    if (Math.abs(value - period) < 0.01) return 'Tₙ';
+                                    if (Math.abs(value - 2*period) < 0.01) return '2Tₙ';
+                                    if (Math.abs(value - 3*period) < 0.01) return '3Tₙ';
+                                    if (Math.abs(value - 4*period) < 0.01) return '4Tₙ';
+                                    if (Math.abs(value - 5*period) < 0.01) return '5Tₙ';
                                     return value.toFixed(1);
                                 }
                             }
