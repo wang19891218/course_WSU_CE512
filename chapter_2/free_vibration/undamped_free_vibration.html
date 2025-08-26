@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undamped Free Vibration</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    console.log('MathJax loaded');
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            max-width: 1200px;
+            height: 85vh;
+            margin: 0 auto;
+        }
+        .box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: auto;
+        }
+        .controls {
+            text-align: center;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            text-align: left;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 200px;
+            margin: 0 10px;
+        }
+        input[type="number"] {
+            width: 60px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px;
+        }
+        .equation {
+            text-align: center;
+            font-size: 12px;
+            margin: 5px 0;
+            padding: 8px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .animation-canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: block;
+            margin: 0 auto;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .parameter-display {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 11px;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 4px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .parameter-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .play-pause {
+            text-align: center;
+            margin: 15px 0;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: #0066cc;">Undamped Free Vibration</h1>
+    
+    <div class="container">
+        <!-- Top Left: Parameter Controls -->
+        <div class="box controls">
+            <h2>Parameters</h2>
+            <div class="control-group">
+                <label for="u0">Initial Position u(0):</label>
+                <input type="range" id="u0" min="-2" max="2" step="0.1" value="1">
+                <input type="number" id="u0-value" min="-2" max="2" step="0.1" value="1">
+            </div>
+            <div class="control-group">
+                <label for="v0">Initial Velocity u̇(0):</label>
+                <input type="range" id="v0" min="-5" max="5" step="0.1" value="0">
+                <input type="number" id="v0-value" min="-5" max="5" step="0.1" value="0">
+            </div>
+            <div class="control-group">
+                <label for="mass">Mass m:</label>
+                <input type="range" id="mass" min="0.5" max="10" step="0.1" value="1">
+                <input type="number" id="mass-value" min="0.5" max="10" step="0.1" value="1">
+                <span style="font-size: 12px; color: #666;">kg</span>
+            </div>
+            <div class="control-group">
+                <label for="stiffness">Stiffness k:</label>
+                <input type="range" id="stiffness" min="1" max="50" step="0.5" value="4">
+                <input type="number" id="stiffness-value" min="1" max="50" step="0.5" value="4">
+                <span style="font-size: 12px; color: #666;">N/m</span>
+            </div>
+            <div class="parameter-display">
+                <p><strong>Current Values:</strong></p>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$u(0)$</th>
+                        <th>$\dot{u}(0)$</th>
+                        <th>$m$</th>
+                        <th>$k$</th>
+                    </tr>
+                    <tr>
+                        <td><span id="u0-display">1.0</span></td>
+                        <td><span id="v0-display">0.0</span></td>
+                        <td><span id="mass-display">1.0</span> kg</td>
+                        <td><span id="stiffness-display">4.0</span> N/m</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Top Right: Analytical Solution -->
+        <div class="box">
+            <h2>Analytical Solution</h2>
+            <div class="equation">
+                $$u(t) = u(0) \cos(\omega_n t) + \frac{\dot{u}(0)}{\omega_n} \sin(\omega_n t)$$
+            </div>
+            <div class="equation">
+                <p><strong>With current parameters:</strong></p>
+                <div id="specific-solution">
+                    $$u(t) = 1.0 \cos(2.0 t) + 0.0 \sin(2.0 t)$$
+                </div>
+            </div>
+            <div class="parameter-display">
+                <p><strong>System Properties:</strong></p>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$\omega_n$</th>
+                        <th>$T$</th>
+                        <th>$f$</th>
+                        <th>$A$</th>
+                    </tr>
+                    <tr>
+                        <td><span id="omega-display">2.0</span> rad/s</td>
+                        <td><span id="period">3.14</span> s</td>
+                        <td><span id="frequency">0.32</span> Hz</td>
+                        <td><span id="amplitude">1.0</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Bottom Left: Mass-Spring Animation -->
+        <div class="box">
+            <h2>Mass-Spring System</h2>
+            <div class="control-group">
+                <label for="speed">Playback Speed:</label>
+                <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                <input type="number" id="speed-value" min="0.1" max="3" step="0.1" value="1">
+                <span style="font-size: 12px; color: #666;">×</span>
+            </div>
+            <canvas id="animationCanvas" class="animation-canvas" width="400" height="280"></canvas>
+        </div>
+        
+        <!-- Bottom Right: Time History Plot -->
+        <div class="box">
+            <h2>Position Time History u(t)</h2>
+            <div class="chart-container">
+                <canvas id="timeHistoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let u0 = 1.0;
+        let v0 = 0.0;
+        let mass = 1.0;
+        let stiffness = 4.0;
+        let omega = 2.0;
+        let time = 0;
+        let animationId;
+        let isPlaying = true;
+        let baseTimeStep = 0.02;
+        let speedMultiplier = 1.0;
+        let timeStep = baseTimeStep * speedMultiplier;
+        let animationMaxTime = 0; // Will be calculated as 4 cycles
+        let historyMaxTime = 0;   // Will be calculated as 5 cycles
+        
+        // Canvas and chart setup
+        let canvas, ctx, chartCtx;
+        
+        // Initialize chart
+        let timeHistoryChart;
+        let timeData = [];
+        let positionData = [];
+        
+        function initChart() {
+            if (timeHistoryChart) {
+                timeHistoryChart.destroy();
+            }
+            
+            timeHistoryChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: timeData,
+                    datasets: [{
+                        label: 'Position u(t)',
+                        data: positionData,
+                        borderColor: '#0066cc',
+                        backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Time (s)'
+                            },
+                            min: 0,
+                            max: historyMaxTime
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Position u(t)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Calculate position at time t
+        function calculatePosition(t) {
+            return u0 * Math.cos(omega * t) + (v0 / omega) * Math.sin(omega * t);
+        }
+        
+        // Calculate natural frequency from mass and stiffness
+        function calculateOmega() {
+            omega = Math.sqrt(stiffness / mass);
+            // Update max times based on new frequency
+            const period = 2 * Math.PI / omega;
+            animationMaxTime = 4 * period; // 4 cycles for animation
+            historyMaxTime = 5 * period;   // 5 cycles for time history
+        }
+
+        // Update displays
+        function updateDisplays() {
+            calculateOmega();
+            
+            document.getElementById('u0-display').textContent = u0.toFixed(1);
+            document.getElementById('v0-display').textContent = v0.toFixed(1);
+            document.getElementById('mass-display').textContent = mass.toFixed(1);
+            document.getElementById('stiffness-display').textContent = stiffness.toFixed(1);
+            document.getElementById('omega-display').textContent = omega.toFixed(2);
+            
+            const period = 2 * Math.PI / omega;
+            const frequency = 1 / period;
+            const amplitude = Math.sqrt(u0 * u0 + (v0 / omega) * (v0 / omega));
+            
+            document.getElementById('period').textContent = period.toFixed(2);
+            document.getElementById('frequency').textContent = frequency.toFixed(2);
+            document.getElementById('amplitude').textContent = amplitude.toFixed(2);
+            
+            // Update specific solution equation
+            const solutionElement = document.getElementById('specific-solution');
+            if (v0 === 0) {
+                solutionElement.innerHTML = `$$u(t) = ${u0.toFixed(1)} \\cos(${omega.toFixed(1)} t)$$`;
+            } else if (u0 === 0) {
+                solutionElement.innerHTML = `$$u(t) = ${(v0/omega).toFixed(2)} \\sin(${omega.toFixed(1)} t)$$`;
+            } else {
+                solutionElement.innerHTML = `$$u(t) = ${u0.toFixed(1)} \\cos(${omega.toFixed(1)} t) + ${(v0/omega).toFixed(2)} \\sin(${omega.toFixed(1)} t)$$`;
+            }
+            
+            // Re-render MathJax for both equation and parameter displays
+            if (window.MathJax) {
+                MathJax.typesetPromise([solutionElement]);
+                const parameterDisplays = document.querySelectorAll('.parameter-display');
+                parameterDisplays.forEach(display => {
+                    MathJax.typesetPromise([display]);
+                });
+            }
+        }
+        
+        // Draw mass-spring system (horizontal)
+        function drawMassSpring() {
+            if (!ctx || !canvas) {
+                console.error('Canvas or context not available');
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const position = calculatePosition(time);
+            const massX = centerX + position * 50; // Scale factor for horizontal motion
+            
+            // Draw fixed wall on the left
+            ctx.fillStyle = '#333';
+            ctx.fillRect(20, centerY - 60, 15, 120);
+            
+            // Draw diagonal lines for wall
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(5, centerY - 60 + i * 15);
+                ctx.lineTo(20, centerY - 45 + i * 15);
+                ctx.stroke();
+            }
+            
+            // Draw spring (horizontal)
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const springStart = 35;
+            const springEnd = massX - 20;
+            const springSegments = 12;
+            const springLength = springEnd - springStart;
+            const segmentLength = springLength / springSegments;
+            
+            ctx.moveTo(springStart, centerY);
+            for (let i = 0; i < springSegments; i++) {
+                const x = springStart + i * segmentLength;
+                const amplitude = (i % 2 === 0) ? 20 : -20;
+                ctx.lineTo(x + segmentLength / 2, centerY + amplitude);
+                ctx.lineTo(x + segmentLength, centerY);
+            }
+            ctx.stroke();
+            
+            // Draw mass
+            const massSize = 40;
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Draw mass outline
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Add mass label
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('m', massX, centerY + 5);
+            
+            // Draw equilibrium line (vertical dashed line)
+            ctx.strokeStyle = '#00aa00';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(centerX, 50);
+            ctx.lineTo(centerX, canvas.height - 30);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw motion arrow
+            if (Math.abs(position) > 0.01) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const arrowStart = massX + (position > 0 ? -30 : 30);
+                const arrowEnd = massX + (position > 0 ? -50 : 50);
+                ctx.moveTo(arrowStart, centerY - 50);
+                ctx.lineTo(arrowEnd, centerY - 50);
+                
+                // Arrow head
+                const headLength = 8;
+                const headAngle = Math.PI / 6;
+                const angle = position > 0 ? Math.PI : 0;
+                ctx.lineTo(arrowEnd - headLength * Math.cos(angle - headAngle), 
+                          centerY - 50 - headLength * Math.sin(angle - headAngle));
+                ctx.moveTo(arrowEnd, centerY - 50);
+                ctx.lineTo(arrowEnd - headLength * Math.cos(angle + headAngle), 
+                          centerY - 50 - headLength * Math.sin(angle + headAngle));
+                ctx.stroke();
+            }
+            
+            // Add labels and time/position display on canvas
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Equilibrium', centerX + 10, 40);
+            ctx.fillText(`u = ${position.toFixed(2)}`, 50, 30);
+            ctx.fillText(`k = ${stiffness.toFixed(1)} N/m`, 50, canvas.height - 40);
+            ctx.fillText(`m = ${mass.toFixed(1)} kg`, massX - 20, centerY + 35);
+            
+            // Add time and position display in top-right corner of canvas
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(`t = ${time.toFixed(2)} s`, canvas.width - 10, 25);
+            ctx.fillText(`u(t) = ${position.toFixed(3)}`, canvas.width - 10, 45);
+        }
+        
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                timeStep = baseTimeStep * speedMultiplier;
+                time += timeStep;
+                
+                // Reset animation after 4 cycles, but continue collecting data for history
+                if (time > animationMaxTime) {
+                    time = 0;
+                }
+                
+                // Only collect data up to 5 cycles for history
+                if (timeData.length === 0 || time <= historyMaxTime) {
+                    const position = calculatePosition(time);
+                    
+                    // Only add new data points, don't duplicate
+                    if (timeData.length === 0 || time > timeData[timeData.length - 1]) {
+                        timeData.push(time);
+                        positionData.push(position);
+                    }
+                }
+                
+                drawMassSpring();
+                
+                // Update chart with full 5-cycle history
+                if (timeHistoryChart) {
+                    timeHistoryChart.data.labels = [...timeData];
+                    timeHistoryChart.data.datasets[0].data = [...positionData];
+                    timeHistoryChart.update('none');
+                }
+                
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // Reset animation (called when parameters change)
+        function resetAnimation() {
+            time = 0;
+            timeData = [];
+            positionData = [];
+            if (timeHistoryChart) {
+                // Update chart x-axis max with new period
+                timeHistoryChart.options.scales.x.max = historyMaxTime;
+                timeHistoryChart.data.labels = [];
+                timeHistoryChart.data.datasets[0].data = [];
+                timeHistoryChart.update();
+            }
+            drawMassSpring();
+        }
+        
+        // Parameter controls
+        function setupControl(paramId, valueId, displayId, callback) {
+            const slider = document.getElementById(paramId);
+            const input = document.getElementById(valueId);
+            
+            if (!slider || !input) {
+                console.error(`Control elements not found: ${paramId}, ${valueId}`);
+                return;
+            }
+            
+            function updateValue(value) {
+                slider.value = value;
+                input.value = value;
+                callback(parseFloat(value));
+                updateDisplays();
+                resetAnimation();
+            }
+            
+            slider.addEventListener('input', (e) => updateValue(e.target.value));
+            input.addEventListener('input', (e) => updateValue(e.target.value));
+        }
+        
+        function setupControls() {
+            setupControl('u0', 'u0-value', 'u0-display', (value) => u0 = value);
+            setupControl('v0', 'v0-value', 'v0-display', (value) => v0 = value);
+            setupControl('mass', 'mass-value', 'mass-display', (value) => mass = value);
+            setupControl('stiffness', 'stiffness-value', 'stiffness-display', (value) => stiffness = value);
+            
+            // Speed control (doesn't reset animation, just changes playback speed)
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            
+            if (speedSlider && speedInput) {
+                function updateSpeed(value) {
+                    speedMultiplier = parseFloat(value);
+                    speedSlider.value = value;
+                    speedInput.value = value;
+                }
+                
+                speedSlider.addEventListener('input', (e) => updateSpeed(e.target.value));
+                speedInput.addEventListener('input', (e) => updateSpeed(e.target.value));
+            }
+        }
+        
+        // Initialize
+        function initializeApp() {
+            console.log('Initializing app');
+            try {
+                // Initialize canvas elements
+                canvas = document.getElementById('animationCanvas');
+                if (!canvas) {
+                    throw new Error('Canvas element not found');
+                }
+                ctx = canvas.getContext('2d');
+                
+                chartCtx = document.getElementById('timeHistoryChart');
+                if (!chartCtx) {
+                    throw new Error('Chart canvas not found');
+                }
+                chartCtx = chartCtx.getContext('2d');
+                
+                initChart();
+                updateDisplays();
+                setupControls();
+                drawMassSpring();
+                animate();
+                console.log('App initialized successfully');
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
+
+        // Wait for both Chart.js and page to load
+        let chartLoaded = false;
+        let pageLoaded = false;
+
+        function checkAndInit() {
+            if (chartLoaded && pageLoaded) {
+                initializeApp();
+            }
+        }
+
+        // Check if Chart.js is loaded
+        function checkChartJs() {
+            if (typeof Chart !== 'undefined') {
+                chartLoaded = true;
+                console.log('Chart.js loaded');
+                checkAndInit();
+            } else {
+                setTimeout(checkChartJs, 100);
+            }
+        }
+
+        window.addEventListener('load', function() {
+            pageLoaded = true;
+            console.log('Page loaded');
+            checkAndInit();
+        });
+
+        // Start checking for Chart.js
+        checkChartJs();
+    </script>
+</body>
+</html>
