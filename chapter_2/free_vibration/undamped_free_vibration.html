@@ -37,16 +37,16 @@
             margin: 0 auto;
         }
         .box {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px) saturate(1.8);
             -webkit-backdrop-filter: blur(20px) saturate(1.8);
             padding: 15px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
             overflow: auto;
             position: relative;
         }
@@ -58,7 +58,7 @@
             left: 0;
             right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
         }
         .controls {
             text-align: center;
@@ -115,7 +115,7 @@
         
         h2 {
             text-align: center;
-            color: rgba(255, 255, 255, 0.9);
+            color: #333;
             margin-bottom: 10px;
             font-size: 18px;
             font-weight: 600;
@@ -135,9 +135,10 @@
             padding: 4px;
             text-align: center;
             border: 1px solid #ddd;
+            color: #333;
         }
         .parameter-table th {
-            background-color: #f8f9fa;
+            background: #f8f9fa;
             font-weight: bold;
         }
         .play-pause {
@@ -227,8 +228,8 @@
                 <table class="parameter-table">
                     <tr>
                         <th>$\omega_n$</th>
-                        <th>$T$</th>
-                        <th>$f$</th>
+                        <th>$T_n$</th>
+                        <th>$f_n$</th>
                         <th>$A$</th>
                     </tr>
                     <tr>
