@@ -514,36 +514,36 @@
         }
         
         // Animation loop
+        let totalTime = 0; // Track total elapsed time for history
+        
         function animate() {
             if (isPlaying) {
                 timeStep = baseTimeStep * speedMultiplier;
+                totalTime += timeStep;
                 time += timeStep;
                 
-                // Reset animation after 4 cycles, but continue collecting data for history
+                // Reset animation after 4 cycles
                 if (time > animationMaxTime) {
                     time = 0;
                 }
                 
-                // Only collect data up to 5 cycles for history
-                if (timeData.length === 0 || time <= historyMaxTime) {
+                // Collect data for time history (up to 5 cycles total)
+                if (totalTime <= historyMaxTime) {
                     const position = calculatePosition(time);
                     
-                    // Only add new data points, don't duplicate
-                    if (timeData.length === 0 || time > timeData[timeData.length - 1]) {
-                        timeData.push(time);
-                        positionData.push(position);
+                    // Add data point
+                    timeData.push(totalTime);
+                    positionData.push(position);
+                    
+                    // Update chart with new data
+                    if (timeHistoryChart) {
+                        timeHistoryChart.data.labels = [...timeData];
+                        timeHistoryChart.data.datasets[0].data = [...positionData];
+                        timeHistoryChart.update('none');
                     }
                 }
                 
                 drawMassSpring();
-                
-                // Update chart with full 5-cycle history
-                if (timeHistoryChart) {
-                    timeHistoryChart.data.labels = [...timeData];
-                    timeHistoryChart.data.datasets[0].data = [...positionData];
-                    timeHistoryChart.update('none');
-                }
-                
                 animationId = requestAnimationFrame(animate);
             }
         }
@@ -551,6 +551,7 @@
         // Reset animation (called when parameters change)
         function resetAnimation() {
             time = 0;
+            totalTime = 0;
             timeData = [];
             positionData = [];
             if (timeHistoryChart) {
