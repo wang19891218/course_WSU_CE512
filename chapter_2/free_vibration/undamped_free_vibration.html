@@ -517,6 +517,18 @@
                 timeHistoryChart.data.datasets[0].data = [];
                 timeHistoryChart.update();
             }
+            
+            // Add initial data point
+            const initialPosition = calculatePosition(0);
+            timeData.push(0);
+            positionData.push(initialPosition);
+            
+            if (timeHistoryChart) {
+                timeHistoryChart.data.labels = [0];
+                timeHistoryChart.data.datasets[0].data = [initialPosition];
+                timeHistoryChart.update('none');
+            }
+            
             drawMassSpring();
         }
         

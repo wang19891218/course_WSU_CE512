@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIE 512 - Dynamics of Structures</title>
+    <!-- Matomo -->
+    <script>
+      var _paq = window._paq = window._paq || [];
+      /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+        var u="https://matomo.waecoco.com/";
+        _paq.push(['setTrackerUrl', u+'matomo.php']);
+        _paq.push(['setSiteId', '12']);
+        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+      })();
+    </script>
+    <!-- End Matomo Code -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) { width: 80px; height: 80px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 60px; height: 60px; left: 20%; animation-delay: -2s; }
+        .particle:nth-child(3) { width: 40px; height: 40px; left: 70%; animation-delay: -4s; }
+        .particle:nth-child(4) { width: 100px; height: 100px; left: 85%; animation-delay: -1s; }
+        .particle:nth-child(5) { width: 30px; height: 30px; left: 50%; animation-delay: -3s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+        }
+
+        /* Physics equations background */
+        .equations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.05;
+            font-size: 24px;
+            color: white;
+        }
+
+        .equation {
+            position: absolute;
+            font-family: 'Times New Roman', serif;
+            animation: drift 20s linear infinite;
+        }
+
+        .equation:nth-child(1) { top: 10%; left: -20%; animation-delay: 0s; }
+        .equation:nth-child(2) { top: 30%; left: -30%; animation-delay: -5s; }
+        .equation:nth-child(3) { top: 50%; left: -25%; animation-delay: -10s; }
+        .equation:nth-child(4) { top: 70%; left: -35%; animation-delay: -15s; }
+
+        @keyframes drift {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(100vw + 400px)); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            color: white;
+        }
+
+        .title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .course-info {
+            font-size: 1rem;
+            opacity: 0.8;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .module-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .module-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), transparent, rgba(255, 255, 255, 0.3));
+            border-radius: 22px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .module-card:hover::before {
+            opacity: 1;
+        }
+
+        .module-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .module-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .module-description {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .module-topics {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-style: italic;
+        }
+
+        .coming-soon {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .coming-soon .module-icon {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .coming-soon:hover {
+            transform: none;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.5rem;
+            }
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Physics equations background -->
+    <div class="equations">
+        <div class="equation">mü + cu̇ + ku = F(t)</div>
+        <div class="equation">ω = √(k/m)</div>
+        <div class="equation">u(t) = Ae^(-ζωt)cos(ωdt + φ)</div>
+        <div class="equation">T = 2π/ω</div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1 class="title">CIE 512</h1>
+            <h2 class="subtitle">Dynamics of Structures</h2>
+            <div class="course-info">Interactive Simulations & Visualizations</div>
+        </header>
+
+        <div class="modules-grid">
+            <!-- Module 1: Undamped Free Vibration -->
+            <div class="module-card" onclick="window.location.href='chapter_2/free_vibration/undamped_free_vibration.html'">
+                <div class="module-icon">🌊</div>
+                <h3 class="module-title">Undamped Free Vibration</h3>
+                <p class="module-description">
+                    Explore the fundamental behavior of single-degree-of-freedom systems undergoing free vibration without damping.
+                </p>
+                <p class="module-topics">
+                    Interactive mass-spring system • Real-time parameter adjustment • Time history analysis
+                </p>
+            </div>
+
+            <!-- Placeholder for future modules -->
+            <div class="module-card coming-soon">
+                <div class="module-icon">⚡</div>
+                <h3 class="module-title">Damped Free Vibration</h3>
+                <p class="module-description">
+                    Coming Soon: Study the effects of viscous damping on free vibration response.
+                </p>
+                <p class="module-topics">
+                    Critical damping • Overdamped response • Underdamped oscillations
+                </p>
+            </div>
+
+            <div class="module-card coming-soon">
+                <div class="module-icon">📊</div>
+                <h3 class="module-title">Forced Vibration</h3>
+                <p class="module-description">
+                    Coming Soon: Analyze structural response to harmonic and arbitrary loading.
+                </p>
+                <p class="module-topics">
+                    Frequency response • Resonance • Dynamic amplification
+                </p>
+            </div>
+
+            <div class="module-card coming-soon">
+                <div class="module-icon">🏗️</div>
+                <h3 class="module-title">Multi-DOF Systems</h3>
+                <p class="module-description">
+                    Coming Soon: Multi-degree-of-freedom system dynamics and modal analysis.
+                </p>
+                <p class="module-topics">
+                    Natural modes • Modal superposition • Eigenvalue analysis
+                </p>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Washington State University • Civil & Environmental Engineering</p>
+            <p>Interactive simulations for structural dynamics education</p>
+        </footer>
+    </div>
+
+    <script>
+        // Add some interactive sparkle effects
+        document.addEventListener('mousemove', function(e) {
+            if (Math.random() < 0.1) {
+                createSparkle(e.clientX, e.clientY);
+            }
+        });
+
+        function createSparkle(x, y) {
+            const sparkle = document.createElement('div');
+            sparkle.style.position = 'fixed';
+            sparkle.style.left = x + 'px';
+            sparkle.style.top = y + 'px';
+            sparkle.style.width = '4px';
+            sparkle.style.height = '4px';
+            sparkle.style.background = 'rgba(255, 255, 255, 0.8)';
+            sparkle.style.borderRadius = '50%';
+            sparkle.style.pointerEvents = 'none';
+            sparkle.style.zIndex = '100';
+            sparkle.style.animation = 'sparkle 1s ease-out forwards';
+            
+            document.body.appendChild(sparkle);
+            
+            setTimeout(() => {
+                document.body.removeChild(sparkle);
+            }, 1000);
+        }
+
+        // Add sparkle animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes sparkle {
+                0% {
+                    transform: scale(0) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1) rotate(180deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
