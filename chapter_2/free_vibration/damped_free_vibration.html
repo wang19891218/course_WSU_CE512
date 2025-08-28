@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damped Free Vibration</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    console.log('MathJax loaded');
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        .main-container {
+            display: grid;
+            grid-template-rows: 40vh 1fr;
+            gap: 15px;
+            max-width: 1400px;
+            height: 88vh;
+            margin: 0 auto;
+        }
+        .top-row {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
+        }
+        .controls {
+            text-align: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .control-group {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        label {
+            display: inline-block;
+            width: 180px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        input[type="number"] {
+            width: 70px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 12px;
+        }
+        .equation {
+            text-align: center;
+            font-size: 11px;
+            margin: 3px 0;
+            padding: 5px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .animation-canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+        }
+        h1 {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 700;
+            text-shadow: 0 2px 20px rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        h3 {
+            font-size: 12px;
+            color: #333;
+            margin: 5px 0 3px 0;
+            font-weight: 600;
+        }
+        .parameter-display {
+            font-size: 11px;
+            color: #666;
+            margin-top: 3px;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3px;
+            font-size: 10px;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 2px;
+            text-align: center;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        .parameter-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .damping-type {
+            text-align: center;
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .underdamped {
+            background: #d4f5d4;
+            color: #2d6a2d;
+        }
+        .critically-damped {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .overdamped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 12px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <h1>Damped Free Vibration</h1>
+    
+    <div class="main-container">
+        <!-- Top Row: Controls, Solution, Animation -->
+        <div class="top-row">
+            <!-- Left: Parameter Controls -->
+            <div class="box controls">
+                <h2>Parameters</h2>
+                <div class="control-group">
+                    <label for="u0">Initial Position u(0):</label>
+                    <input type="range" id="u0" min="-2" max="2" step="0.1" value="1">
+                    <input type="number" id="u0-value" min="-2" max="2" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label for="v0">Initial Velocity u̇(0):</label>
+                    <input type="range" id="v0" min="-5" max="5" step="0.1" value="0">
+                    <input type="number" id="v0-value" min="-5" max="5" step="0.1" value="0">
+                </div>
+                <div class="control-group">
+                    <label for="mass">Mass m:</label>
+                    <input type="range" id="mass" min="0.5" max="10" step="0.1" value="1">
+                    <input type="number" id="mass-value" min="0.5" max="10" step="0.1" value="1">
+                    <span style="font-size: 11px; color: #666;">kg</span>
+                </div>
+                <div class="control-group">
+                    <label for="damping">Damping c:</label>
+                    <input type="range" id="damping" min="0" max="10" step="0.1" value="2">
+                    <input type="number" id="damping-value" min="0" max="10" step="0.1" value="2">
+                    <span style="font-size: 11px; color: #666;">N·s/m</span>
+                </div>
+                <div class="control-group">
+                    <label for="stiffness">Stiffness k:</label>
+                    <input type="range" id="stiffness" min="1" max="50" step="0.5" value="10">
+                    <input type="number" id="stiffness-value" min="1" max="50" step="0.5" value="10">
+                    <span style="font-size: 11px; color: #666;">N/m</span>
+                </div>
+                <div class="control-group">
+                    <label for="show-undamped">Show Undamped:</label>
+                    <input type="checkbox" id="show-undamped" checked>
+                </div>
+            </div>
+            
+            <!-- Middle: Analytical Solution and Parameters -->
+            <div class="box">
+                <h2>Analytical Solution</h2>
+                <div class="equation">
+                    $$u(t) = e^{-\zeta \omega_n t}\left[u(0) \cos(\omega_D t) + \frac{\dot{u}(0) + \zeta \omega_n u(0)}{\omega_D} \sin(\omega_D t)\right]$$
+                </div>
+                <div class="equation">
+                    <p style="font-size: 11px; margin: 5px 0;"><strong>With current parameters:</strong></p>
+                    <div id="specific-solution" style="font-size: 10px;">
+                        $$u(t) = e^{-0.32t}\left[1.0 \cos(3.14 t) + 0.10 \sin(3.14 t)\right]$$
+                    </div>
+                </div>
+                
+                <h3>System Properties</h3>
+                <div id="damping-type" class="damping-type underdamped">
+                    Underdamped (ζ < 1)
+                </div>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$\omega_n$</th>
+                        <th>$\zeta$</th>
+                        <th>$\omega_D$</th>
+                        <th>$T_D$</th>
+                        <th>$c_{cr}$</th>
+                    </tr>
+                    <tr>
+                        <td><span id="omega-n">3.16</span> rad/s</td>
+                        <td><span id="zeta">0.32</span></td>
+                        <td><span id="omega-d">3.01</span> rad/s</td>
+                        <td><span id="period-d">2.09</span> s</td>
+                        <td><span id="c-critical">6.32</span> N·s/m</td>
+                    </tr>
+                </table>
+                
+                <h3>Decay Properties</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <th>Envelope Decay</th>
+                        <th>Time Constant</th>
+                        <th>99% Decay Time</th>
+                    </tr>
+                    <tr>
+                        <td>$\pm e^{-\zeta\omega_n t}$</td>
+                        <td><span id="time-constant">1.00</span> s</td>
+                        <td><span id="decay-time">4.60</span> s</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Right: Mass-Spring-Damper Animation -->
+            <div class="box">
+                <h2>System Animation</h2>
+                <div class="control-group" style="padding: 0 10px;">
+                    <label for="speed" style="width: auto;">Speed:</label>
+                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1" style="flex: 1;">
+                    <input type="number" id="speed-value" min="0.1" max="3" step="0.1" value="1" style="width: 50px;">
+                    <span style="font-size: 11px; color: #666;">×</span>
+                </div>
+                <canvas id="animationCanvas" class="animation-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Bottom Row: Full-width Time History -->
+        <div class="box">
+            <h2>Position Time History</h2>
+            <div style="text-align: center; margin-bottom: 10px;">
+                <span class="legend-item">
+                    <span class="legend-color" style="background: #0066cc;"></span>
+                    Damped Response
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color" style="background: #ff6b6b;"></span>
+                    Undamped Response
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color" style="background: #888; border-style: dashed;"></span>
+                    Exponential Envelope ±e^(-ζωₙt)
+                </span>
+            </div>
+            <div class="chart-container">
+                <canvas id="timeHistoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let u0 = 1.0;
+        let v0 = 0.0;
+        let mass = 1.0;
+        let damping = 2.0;
+        let stiffness = 10.0;
+        let omega_n = 0;
+        let zeta = 0;
+        let omega_d = 0;
+        let c_critical = 0;
+        let showUndamped = true;
+        
+        let time = 0;
+        let totalTime = 0;
+        let animationId;
+        let isPlaying = true;
+        let baseTimeStep = 0.02;
+        let speedMultiplier = 1.0;
+        let timeStep = baseTimeStep * speedMultiplier;
+        let animationMaxTime = 0;
+        let historyMaxTime = 0;
+        
+        // Canvas and chart setup
+        let canvas, ctx, chartCtx;
+        let timeHistoryChart;
+        let timeData = [];
+        let dampedData = [];
+        let undampedData = [];
+        let envelopeUpperData = [];
+        let envelopeLowerData = [];
+        
+        // Calculate system parameters
+        function calculateSystemParams() {
+            if (!mass || !stiffness) {
+                console.error('Invalid mass or stiffness values');
+                return;
+            }
+            
+            omega_n = Math.sqrt(stiffness / mass);
+            c_critical = 2 * Math.sqrt(mass * stiffness);
+            zeta = c_critical > 0 ? damping / c_critical : 0;
+            
+            // Calculate damped frequency based on damping type
+            if (zeta < 1) {
+                // Underdamped
+                omega_d = omega_n * Math.sqrt(1 - zeta * zeta);
+            } else {
+                // Critically damped or overdamped
+                omega_d = 0;
+            }
+            
+            // Update max times based on frequency
+            const period = omega_d > 0 ? 2 * Math.PI / omega_d : 2 * Math.PI / omega_n;
+            animationMaxTime = 3 * period;
+            historyMaxTime = 5 * period;
+            
+            // For overdamped/critically damped, use a time based on decay
+            if (zeta >= 1 && omega_n > 0) {
+                const timeConstant = 1 / (zeta * omega_n);
+                historyMaxTime = Math.min(5 * timeConstant, 20);
+                animationMaxTime = historyMaxTime * 0.6;
+            }
+        }
+        
+        // Calculate damped position at time t
+        function calculateDampedPosition(t) {
+            if (!omega_n || omega_n === 0) return u0;
+            
+            if (zeta < 1 && omega_d > 0) {
+                // Underdamped
+                const envelope = Math.exp(-zeta * omega_n * t);
+                const costerm = u0 * Math.cos(omega_d * t);
+                const sinterm = ((v0 + zeta * omega_n * u0) / omega_d) * Math.sin(omega_d * t);
+                return envelope * (costerm + sinterm);
+            } else if (Math.abs(zeta - 1) < 0.001) {
+                // Critically damped
+                const envelope = Math.exp(-omega_n * t);
+                return envelope * (u0 + (v0 + omega_n * u0) * t);
+            } else if (zeta > 1) {
+                // Overdamped
+                const sqrtTerm = Math.sqrt(zeta * zeta - 1);
+                const r1 = -omega_n * (zeta - sqrtTerm);
+                const r2 = -omega_n * (zeta + sqrtTerm);
+                if (Math.abs(r2 - r1) > 0.001) {
+                    const A = (u0 * r2 - v0) / (r2 - r1);
+                    const B = (v0 - u0 * r1) / (r2 - r1);
+                    return A * Math.exp(r1 * t) + B * Math.exp(r2 * t);
+                }
+                return u0 * Math.exp(-omega_n * zeta * t);
+            }
+            return u0;
+        }
+        
+        // Calculate undamped position at time t
+        function calculateUndampedPosition(t) {
+            if (!omega_n || omega_n === 0) return u0;
+            return u0 * Math.cos(omega_n * t) + (v0 / omega_n) * Math.sin(omega_n * t);
+        }
+        
+        // Update displays
+        function updateDisplays() {
+            calculateSystemParams();
+            
+            // Update system properties
+            document.getElementById('omega-n').textContent = omega_n.toFixed(2);
+            document.getElementById('zeta').textContent = zeta.toFixed(3);
+            document.getElementById('omega-d').textContent = omega_d.toFixed(2);
+            document.getElementById('c-critical').textContent = c_critical.toFixed(2);
+            
+            if (omega_d > 0) {
+                const period_d = 2 * Math.PI / omega_d;
+                document.getElementById('period-d').textContent = period_d.toFixed(2);
+            } else {
+                document.getElementById('period-d').textContent = '—';
+            }
+            
+            // Update decay properties
+            const timeConstant = 1 / (zeta * omega_n);
+            const decay99 = 4.605 / (zeta * omega_n); // Time to reach 1% of initial value
+            document.getElementById('time-constant').textContent = timeConstant.toFixed(2);
+            document.getElementById('decay-time').textContent = decay99.toFixed(2);
+            
+            // Update damping type display
+            const dampingTypeEl = document.getElementById('damping-type');
+            if (zeta < 1) {
+                dampingTypeEl.textContent = `Underdamped (ζ = ${zeta.toFixed(3)} < 1)`;
+                dampingTypeEl.className = 'damping-type underdamped';
+            } else if (Math.abs(zeta - 1) < 0.01) {
+                dampingTypeEl.textContent = `Critically Damped (ζ = ${zeta.toFixed(3)} ≈ 1)`;
+                dampingTypeEl.className = 'damping-type critically-damped';
+            } else {
+                dampingTypeEl.textContent = `Overdamped (ζ = ${zeta.toFixed(3)} > 1)`;
+                dampingTypeEl.className = 'damping-type overdamped';
+            }
+            
+            // Update specific solution equation
+            updateSolutionEquation();
+        }
+        
+        // Update the specific solution equation
+        function updateSolutionEquation() {
+            const solutionElement = document.getElementById('specific-solution');
+            if (!solutionElement) return;
+            
+            if (zeta < 1 && omega_d > 0) {
+                const coeff = ((v0 + zeta * omega_n * u0) / omega_d).toFixed(2);
+                solutionElement.innerHTML = `$$u(t) = e^{-${(zeta * omega_n).toFixed(2)}t}\\left[${u0.toFixed(1)} \\cos(${omega_d.toFixed(2)} t) + ${coeff} \\sin(${omega_d.toFixed(2)} t)\\right]$$`;
+            } else if (Math.abs(zeta - 1) < 0.01) {
+                const coeff = (v0 + omega_n * u0).toFixed(2);
+                solutionElement.innerHTML = `$$u(t) = e^{-${omega_n.toFixed(2)}t}\\left[${u0.toFixed(1)} + ${coeff} t\\right]$$`;
+            } else {
+                solutionElement.innerHTML = `$$u(t) = \\text{Overdamped solution (two exponentials)}$$`;
+            }
+            
+            // Re-render MathJax
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([solutionElement]).catch(err => {
+                    console.error('MathJax error:', err);
+                });
+            }
+        }
+        
+        // Initialize chart
+        function initChart() {
+            console.log('Initializing chart...');
+            if (timeHistoryChart) {
+                timeHistoryChart.destroy();
+            }
+            
+            timeHistoryChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: [...timeData],
+                    datasets: [
+                        {
+                            label: 'Damped Response',
+                            data: [...dampedData],
+                            borderColor: '#0066cc',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Undamped Response',
+                            data: [...undampedData],
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            fill: false,
+                            pointRadius: 0,
+                            hidden: !showUndamped
+                        },
+                        {
+                            label: 'Upper Envelope',
+                            data: [...envelopeUpperData],
+                            borderColor: '#888',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Lower Envelope',
+                            data: [...envelopeLowerData],
+                            borderColor: '#888',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Time (s)',
+                                font: { size: 11 }
+                            },
+                            min: 0,
+                            max: historyMaxTime,
+                            ticks: {
+                                font: { size: 10 },
+                                callback: function(value, index, values) {
+                                    if (omega_d > 0) {
+                                        const period = 2 * Math.PI / omega_d;
+                                        if (value === 0) return '0';
+                                        if (Math.abs(value - period) < 0.1) return 'TD';
+                                        if (Math.abs(value - 2*period) < 0.1) return '2TD';
+                                        if (Math.abs(value - 3*period) < 0.1) return '3TD';
+                                        if (Math.abs(value - 4*period) < 0.1) return '4TD';
+                                        if (Math.abs(value - 5*period) < 0.1) return '5TD';
+                                    }
+                                    return value.toFixed(1);
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Position u(t)',
+                                font: { size: 11 }
+                            },
+                            ticks: {
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Draw mass-spring-damper system (horizontal)
+        function drawMassSpringDamper() {
+            if (!ctx || !canvas) {
+                console.error('Canvas or context not available');
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const position = calculateDampedPosition(time);
+            const scale = 30; // Scale factor for visualization
+            const massX = centerX + position * scale;
+            
+            // Draw fixed wall on the left
+            ctx.fillStyle = '#333';
+            ctx.fillRect(15, centerY - 50, 12, 100);
+            
+            // Draw diagonal lines for wall
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                ctx.moveTo(5, centerY - 50 + i * 16);
+                ctx.lineTo(15, centerY - 35 + i * 16);
+                ctx.stroke();
+            }
+            
+            // Draw spring (horizontal)
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const springStart = 27;
+            const springEnd = massX - 20;
+            const springY = centerY - 15;
+            const springSegments = 10;
+            const springLength = springEnd - springStart;
+            const segmentLength = springLength / springSegments;
+            
+            ctx.moveTo(springStart, springY);
+            for (let i = 0; i < springSegments; i++) {
+                const x = springStart + i * segmentLength;
+                const amplitude = (i % 2 === 0) ? 15 : -15;
+                ctx.lineTo(x + segmentLength / 2, springY + amplitude);
+                ctx.lineTo(x + segmentLength, springY);
+            }
+            ctx.stroke();
+            
+            // Draw damper (horizontal cylinder)
+            const damperY = centerY + 15;
+            const damperStart = 27;
+            const damperEnd = massX - 20;
+            const damperMid = (damperStart + damperEnd) / 2;
+            
+            // Damper cylinder
+            ctx.fillStyle = '#999';
+            ctx.fillRect(damperMid - 20, damperY - 8, 40, 16);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(damperMid - 20, damperY - 8, 40, 16);
+            
+            // Damper piston rod
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(damperStart, damperY);
+            ctx.lineTo(damperMid - 20, damperY);
+            ctx.moveTo(damperMid + 20, damperY);
+            ctx.lineTo(damperEnd, damperY);
+            ctx.stroke();
+            
+            // Draw mass
+            const massSize = 35;
+            ctx.fillStyle = '#4a90e2';
+            ctx.fillRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Draw mass outline
+            ctx.strokeStyle = '#2c5aa0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Add mass label
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('m', massX, centerY + 3);
+            
+            // Draw equilibrium line (vertical dashed line)
+            ctx.strokeStyle = '#00aa00';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(centerX, 30);
+            ctx.lineTo(centerX, canvas.height - 20);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Equilibrium', centerX + 5, 25);
+            ctx.fillText('Spring (k)', 30, springY - 20);
+            ctx.fillText('Damper (c)', 30, damperY + 25);
+            
+            // Add time and position display
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(`t = ${time.toFixed(2)} s`, canvas.width - 10, 20);
+            ctx.fillText(`u(t) = ${position.toFixed(3)}`, canvas.width - 10, 35);
+        }
+        
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                timeStep = baseTimeStep * speedMultiplier;
+                totalTime += timeStep;
+                time += timeStep;
+                
+                // Reset animation after animationMaxTime
+                if (time > animationMaxTime) {
+                    time = 0;
+                }
+                
+                // Collect data for time history (up to historyMaxTime)
+                if (totalTime <= historyMaxTime) {
+                    const dampedPos = calculateDampedPosition(totalTime);
+                    const undampedPos = calculateUndampedPosition(totalTime);
+                    const envelope = Math.exp(-zeta * omega_n * totalTime);
+                    
+                    timeData.push(totalTime);
+                    dampedData.push(dampedPos);
+                    undampedData.push(undampedPos);
+                    
+                    // Calculate envelope based on initial amplitude
+                    const amplitude = omega_n > 0 ? Math.sqrt(u0 * u0 + (v0 / omega_n) * (v0 / omega_n)) : Math.abs(u0);
+                    envelopeUpperData.push(amplitude * envelope);
+                    envelopeLowerData.push(-amplitude * envelope);
+                    
+                    // Update chart with new data
+                    if (timeHistoryChart) {
+                        timeHistoryChart.data.labels = [...timeData];
+                        timeHistoryChart.data.datasets[0].data = [...dampedData];
+                        timeHistoryChart.data.datasets[1].data = [...undampedData];
+                        timeHistoryChart.data.datasets[2].data = [...envelopeUpperData];
+                        timeHistoryChart.data.datasets[3].data = [...envelopeLowerData];
+                        timeHistoryChart.update('none');
+                    }
+                }
+                
+                drawMassSpringDamper();
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // Reset animation
+        function resetAnimation() {
+            time = 0;
+            totalTime = 0;
+            timeData = [];
+            dampedData = [];
+            undampedData = [];
+            envelopeUpperData = [];
+            envelopeLowerData = [];
+            
+            if (timeHistoryChart) {
+                // Update chart x-axis max with new period
+                timeHistoryChart.options.scales.x.max = historyMaxTime;
+                timeHistoryChart.data.labels = [];
+                timeHistoryChart.data.datasets[0].data = [];
+                timeHistoryChart.data.datasets[1].data = [];
+                timeHistoryChart.data.datasets[2].data = [];
+                timeHistoryChart.data.datasets[3].data = [];
+                timeHistoryChart.update();
+            }
+            
+            // Add initial data points
+            const initialDamped = calculateDampedPosition(0);
+            const initialUndamped = calculateUndampedPosition(0);
+            const amplitude = omega_n > 0 ? Math.sqrt(u0 * u0 + (v0 / omega_n) * (v0 / omega_n)) : Math.abs(u0);
+            
+            timeData.push(0);
+            dampedData.push(initialDamped);
+            undampedData.push(initialUndamped);
+            envelopeUpperData.push(amplitude);
+            envelopeLowerData.push(-amplitude);
+            
+            if (timeHistoryChart) {
+                timeHistoryChart.data.labels = [0];
+                timeHistoryChart.data.datasets[0].data = [initialDamped];
+                timeHistoryChart.data.datasets[1].data = [initialUndamped];
+                timeHistoryChart.data.datasets[2].data = [amplitude];
+                timeHistoryChart.data.datasets[3].data = [-amplitude];
+                timeHistoryChart.update('none');
+            }
+            
+            drawMassSpringDamper();
+        }
+        
+        // Parameter controls
+        function setupControl(paramId, valueId, callback) {
+            const slider = document.getElementById(paramId);
+            const input = document.getElementById(valueId);
+            
+            if (!slider || !input) {
+                console.error(`Control elements not found: ${paramId}, ${valueId}`);
+                return;
+            }
+            
+            function updateValue(value) {
+                slider.value = value;
+                input.value = value;
+                callback(parseFloat(value));
+                updateDisplays();
+                resetAnimation();
+            }
+            
+            slider.addEventListener('input', (e) => updateValue(e.target.value));
+            input.addEventListener('input', (e) => updateValue(e.target.value));
+        }
+        
+        function setupControls() {
+            setupControl('u0', 'u0-value', (value) => u0 = value);
+            setupControl('v0', 'v0-value', (value) => v0 = value);
+            setupControl('mass', 'mass-value', (value) => mass = value);
+            setupControl('damping', 'damping-value', (value) => damping = value);
+            setupControl('stiffness', 'stiffness-value', (value) => stiffness = value);
+            
+            // Speed control (doesn't reset animation)
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            
+            if (speedSlider && speedInput) {
+                function updateSpeed(value) {
+                    speedMultiplier = parseFloat(value);
+                    speedSlider.value = value;
+                    speedInput.value = value;
+                }
+                
+                speedSlider.addEventListener('input', (e) => updateSpeed(e.target.value));
+                speedInput.addEventListener('input', (e) => updateSpeed(e.target.value));
+            }
+            
+            // Show undamped checkbox
+            const showUndampedCheckbox = document.getElementById('show-undamped');
+            if (showUndampedCheckbox) {
+                showUndampedCheckbox.addEventListener('change', (e) => {
+                    showUndamped = e.target.checked;
+                    if (timeHistoryChart) {
+                        timeHistoryChart.data.datasets[1].hidden = !showUndamped;
+                        timeHistoryChart.update();
+                    }
+                });
+            }
+        }
+        
+        // Initialize app
+        function initializeApp() {
+            console.log('=== Starting Damped Free Vibration App Initialization ===');
+            console.log('Initial values:', { u0, v0, mass, damping, stiffness });
+            
+            try {
+                // Initialize canvas elements
+                console.log('Step 1: Looking for animation canvas...');
+                canvas = document.getElementById('animationCanvas');
+                if (!canvas) {
+                    throw new Error('Animation canvas element not found');
+                }
+                console.log('Animation canvas found:', canvas);
+                
+                // Set canvas size dynamically
+                console.log('Step 2: Setting canvas size...');
+                const resizeCanvas = () => {
+                    const container = canvas.parentElement;
+                    const rect = container.getBoundingClientRect();
+                    const h2Height = container.querySelector('h2') ? container.querySelector('h2').offsetHeight : 0;
+                    const controlHeight = 35; // Height for speed control
+                    
+                    canvas.width = rect.width - 20;
+                    canvas.height = Math.min(rect.height - h2Height - controlHeight - 20, 200); // Max height 200px
+                    console.log(`Canvas resized to: ${canvas.width}x${canvas.height}`);
+                };
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                
+                ctx = canvas.getContext('2d');
+                console.log('Canvas 2D context obtained:', ctx ? 'success' : 'failed');
+                
+                console.log('Step 3: Looking for chart canvas...');
+                chartCtx = document.getElementById('timeHistoryChart');
+                if (!chartCtx) {
+                    throw new Error('Chart canvas not found');
+                }
+                console.log('Chart canvas found:', chartCtx);
+                chartCtx = chartCtx.getContext('2d');
+                console.log('Chart 2D context obtained:', chartCtx ? 'success' : 'failed');
+                
+                // Calculate initial system parameters first
+                console.log('Step 4: Calculating system parameters...');
+                calculateSystemParams();
+                console.log('System parameters:', { omega_n, zeta, omega_d, c_critical });
+                
+                // Initialize with first data point
+                console.log('Step 5: Calculating initial positions...');
+                const initialDamped = calculateDampedPosition(0);
+                const initialUndamped = calculateUndampedPosition(0);
+                const amplitude = omega_n > 0 ? Math.sqrt(u0 * u0 + (v0 / omega_n) * (v0 / omega_n)) : Math.abs(u0);
+                console.log('Initial positions:', { initialDamped, initialUndamped, amplitude });
+                
+                timeData.push(0);
+                dampedData.push(initialDamped);
+                undampedData.push(initialUndamped);
+                envelopeUpperData.push(amplitude);
+                envelopeLowerData.push(-amplitude);
+                console.log('Data arrays initialized with lengths:', {
+                    timeData: timeData.length,
+                    dampedData: dampedData.length,
+                    undampedData: undampedData.length
+                });
+                
+                console.log('Step 6: Creating chart...');
+                initChart();
+                console.log('Step 7: Updating displays...');
+                updateDisplays();
+                console.log('Step 8: Setting up controls...');
+                setupControls();
+                
+                // Update chart with initial data
+                console.log('Step 9: Updating chart with initial data...');
+                if (timeHistoryChart) {
+                    timeHistoryChart.data.labels = [0];
+                    timeHistoryChart.data.datasets[0].data = [initialDamped];
+                    timeHistoryChart.data.datasets[1].data = [initialUndamped];
+                    timeHistoryChart.data.datasets[2].data = [amplitude];
+                    timeHistoryChart.data.datasets[3].data = [-amplitude];
+                    timeHistoryChart.update('none');
+                    console.log('Chart updated successfully');
+                } else {
+                    console.error('Chart not available for update!');
+                }
+                
+                console.log('Step 10: Drawing mass-spring-damper...');
+                drawMassSpringDamper();
+                console.log('Step 11: Starting animation...');
+                animate();
+                console.log('=== App initialization completed successfully ===');
+            } catch (error) {
+                console.error('=== ERROR during initialization ===');
+                console.error('Error details:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+        
+        // Wait for both Chart.js and page to load
+        console.log('=== Page loading sequence started ===');
+        let chartLoaded = false;
+        let pageLoaded = false;
+        let chartCheckAttempts = 0;
+        
+        function checkAndInit() {
+            console.log('Checking initialization conditions:', { chartLoaded, pageLoaded });
+            if (chartLoaded && pageLoaded) {
+                console.log('Both conditions met, starting app initialization...');
+                initializeApp();
+            } else {
+                console.log('Waiting for:', {
+                    needChart: !chartLoaded,
+                    needPage: !pageLoaded
+                });
+            }
+        }
+        
+        // Check if Chart.js is loaded
+        function checkChartJs() {
+            chartCheckAttempts++;
+            console.log(`Chart.js check attempt #${chartCheckAttempts}...`);
+            
+            if (typeof Chart !== 'undefined') {
+                chartLoaded = true;
+                console.log('✓ Chart.js loaded successfully');
+                checkAndInit();
+            } else {
+                console.log('Chart.js not yet available, retrying...');
+                if (chartCheckAttempts < 50) {  // Max 5 seconds
+                    setTimeout(checkChartJs, 100);
+                } else {
+                    console.error('FATAL: Chart.js failed to load after 5 seconds');
+                }
+            }
+        }
+        
+        window.addEventListener('load', function() {
+            pageLoaded = true;
+            console.log('✓ Page DOM loaded');
+            checkAndInit();
+        });
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content loaded event fired');
+        });
+        
+        // Start checking for Chart.js
+        console.log('Starting Chart.js detection...');
+        checkChartJs();
+    </script>
+</body>
+</html>
