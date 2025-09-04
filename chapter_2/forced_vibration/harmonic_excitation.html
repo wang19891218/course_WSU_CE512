@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Excitation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Matomo -->
+    <script>
+      var _paq = window._paq = window._paq || [];
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+        var u="https://matomo.waecoco.com/";
+        _paq.push(['setTrackerUrl', u+'matomo.php']);
+        _paq.push(['setSiteId', '12']);
+        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+      })();
+    </script>
+    <!-- End Matomo Code -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        .main-container {
+            display: grid;
+            grid-template-rows: 35vh 1fr;
+            gap: 15px;
+            max-width: 1600px;
+            height: 88vh;
+            margin: 0 auto;
+        }
+        .top-row {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
+        }
+        .controls {
+            text-align: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .control-group {
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 11px;
+        }
+        input[type="range"] {
+            flex: 1;
+            margin: 0 8px;
+        }
+        input[type="number"] {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 10px;
+        }
+        .equation {
+            text-align: center;
+            font-size: 10px;
+            margin: 2px 0;
+            padding: 4px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .animation-canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+        }
+        h1 {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 700;
+            text-shadow: 0 2px 20px rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        h3 {
+            font-size: 11px;
+            color: #333;
+            margin: 3px 0 2px 0;
+            font-weight: 600;
+        }
+        .parameter-display {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2px;
+            font-size: 9px;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 1px;
+            text-align: center;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        .parameter-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .resonance-indicator {
+            text-align: center;
+            padding: 3px;
+            margin: 3px 0;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .near-resonance {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .at-resonance {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            animation: pulse 1s infinite;
+        }
+        .off-resonance {
+            background: #d4f5d4;
+            color: #2d6a2d;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .legend-item {
+            display: inline-flex;
+            margin: 0 5px;
+            font-size: 11px;
+            align-items: center;
+            gap: 3px;
+        }
+        .legend-checkbox {
+            width: 12px;
+            height: 12px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .legend-dashed {
+            background-image: repeating-linear-gradient(
+                to right,
+                transparent,
+                transparent 2px,
+                currentColor 2px,
+                currentColor 4px
+            );
+            background-color: transparent !important;
+        }
+        .bottom-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+        .phase-display {
+            font-size: 10px;
+            text-align: center;
+            margin: 2px 0;
+            padding: 2px;
+            background: #e8f4fd;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Harmonic Excitation</h1>
+    
+    <div class="main-container">
+        <!-- Top Row: Controls, Solution, Animation, Frequency Response -->
+        <div class="top-row">
+            <!-- Left: Parameter Controls -->
+            <div class="box controls">
+                <h2>System Parameters</h2>
+                <div class="control-group">
+                    <label for="mass">Mass m:</label>
+                    <input type="range" id="mass" min="0.5" max="10" step="0.1" value="1">
+                    <input type="number" id="mass-value" min="0.5" max="10" step="0.1" value="1">
+                    <span style="font-size: 10px; color: #666;">kg</span>
+                </div>
+                <div class="control-group">
+                    <label for="damping">Damping c:</label>
+                    <input type="range" id="damping" min="0" max="5" step="0.1" value="1">
+                    <input type="number" id="damping-value" min="0" max="5" step="0.1" value="1">
+                    <span style="font-size: 10px; color: #666;">N·s/m</span>
+                </div>
+                <div class="control-group">
+                    <label for="stiffness">Stiffness k:</label>
+                    <input type="range" id="stiffness" min="1" max="50" step="0.5" value="10">
+                    <input type="number" id="stiffness-value" min="1" max="50" step="0.5" value="10">
+                    <span style="font-size: 10px; color: #666;">N/m</span>
+                </div>
+                
+                <h3>Excitation</h3>
+                <div class="control-group">
+                    <label for="force-amplitude">Force p₀:</label>
+                    <input type="range" id="force-amplitude" min="0.1" max="20" step="0.1" value="10">
+                    <input type="number" id="force-amplitude-value" min="0.1" max="20" step="0.1" value="10">
+                    <span style="font-size: 10px; color: #666;">N</span>
+                </div>
+                <div class="control-group">
+                    <label for="frequency">Frequency ω:</label>
+                    <input type="range" id="frequency" min="0.1" max="10" step="0.1" value="3.16">
+                    <input type="number" id="frequency-value" min="0.1" max="10" step="0.1" value="3.16">
+                    <span style="font-size: 10px; color: #666;">rad/s</span>
+                </div>
+                
+                <h3>Initial Conditions</h3>
+                <div class="control-group">
+                    <label for="initial-displacement">u(0):</label>
+                    <input type="range" id="initial-displacement" min="-2" max="2" step="0.1" value="0">
+                    <input type="number" id="initial-displacement-value" min="-2" max="2" step="0.1" value="0">
+                    <span style="font-size: 10px; color: #666;">m</span>
+                </div>
+                <div class="control-group">
+                    <label for="initial-velocity">u̇(0):</label>
+                    <input type="range" id="initial-velocity" min="-5" max="5" step="0.1" value="0">
+                    <input type="number" id="initial-velocity-value" min="-5" max="5" step="0.1" value="0">
+                    <span style="font-size: 10px; color: #666;">m/s</span>
+                </div>
+                
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="speed">Playback Speed:</label>
+                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                    <input type="number" id="speed-value" min="0.1" max="3" step="0.1" value="1">
+                    <span style="font-size: 10px; color: #666;">×</span>
+                </div>
+                <div class="control-group">
+                    <label for="show-transient">Show Transient:</label>
+                    <input type="checkbox" id="show-transient" checked>
+                </div>
+            </div>
+            
+            <!-- Middle-Left: Analytical Solution -->
+            <div class="box">
+                <h2>Complete Solution</h2>
+                <div class="equation">
+                    $$u(t) = (u_{st})_o \frac{1}{2\zeta} \left[ e^{-\zeta\omega_n t} \left( \cos \omega_D t + \frac{\zeta}{\sqrt{1-\zeta^2}} \sin \omega_D t \right) - \cos \omega_n t \right]$$
+                </div>
+                <div class="equation">
+                    $$\text{where } (u_{st})_o = \frac{p_0}{k}, \quad \omega_D = \omega_n\sqrt{1-\zeta^2}$$
+                </div>
+                
+                <h3>Current Solution</h3>
+                <div id="specific-solution" class="equation">
+                    $$u_{ss}(t) = 1.00 \cos(3.16 t - 0.32)$$
+                </div>
+                
+                <h3>System Properties</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$\omega_n$</th>
+                        <th>$\zeta$</th>
+                        <th>$r = \omega/\omega_n$</th>
+                        <th>$\phi$ (rad)</th>
+                    </tr>
+                    <tr>
+                        <td><span id="omega-n">3.16</span></td>
+                        <td><span id="zeta">0.16</span></td>
+                        <td><span id="frequency-ratio">1.00</span></td>
+                        <td><span id="phase-angle">1.57</span></td>
+                    </tr>
+                </table>
+                
+                <h3>Response Properties</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <th>Static Defl.</th>
+                        <th>Dyn. Magnif.</th>
+                        <th>Max Response</th>
+                    </tr>
+                    <tr>
+                        <td><span id="static-deflection">1.00</span></td>
+                        <td><span id="dynamic-magnification">1.00</span></td>
+                        <td><span id="max-response">1.00</span></td>
+                    </tr>
+                </table>
+                
+                <div id="resonance-indicator" class="resonance-indicator off-resonance">
+                    Off Resonance
+                </div>
+                
+                <div class="phase-display">
+                    Phase lag: <span id="phase-display">90°</span>
+                </div>
+            </div>
+            
+            <!-- Middle-Right: System Animation -->
+            <div class="box">
+                <h2>System Animation</h2>
+                <canvas id="animationCanvas" class="animation-canvas"></canvas>
+            </div>
+            
+            <!-- Right: Frequency Response -->
+            <div class="box">
+                <h2>Frequency Response</h2>
+                <div class="chart-container">
+                    <canvas id="frequencyResponseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Row: Time History Charts -->
+        <div class="bottom-charts">
+            <!-- Left: Displacement Time History -->
+            <div class="box">
+                <h2>Displacement Response</h2>
+                <div style="text-align: center; margin-bottom: 5px;">
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-total-response" class="legend-checkbox" checked>
+                        <span class="legend-color" style="background: #0066cc;"></span>
+                        <label for="show-total-response">Total Response</label>
+                    </span>
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-steady-state" class="legend-checkbox" checked>
+                        <span class="legend-color legend-dashed" style="color: #ff6b6b;"></span>
+                        <label for="show-steady-state">Steady-State</label>
+                    </span>
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-force" class="legend-checkbox" checked>
+                        <span class="legend-color" style="background: #28a745;"></span>
+                        <label for="show-force">Force/10</label>
+                    </span>
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-envelope" class="legend-checkbox" checked>
+                        <span class="legend-color legend-dashed" style="color: #ffa500;"></span>
+                        <label for="show-envelope">Envelope</label>
+                    </span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="displacementChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Right: Force and Response -->
+            <div class="box">
+                <h2>Force vs Response</h2>
+                <div style="text-align: center; margin-bottom: 5px;">
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #28a745;"></span>
+                        Applied Force
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #0066cc;"></span>
+                        Displacement Response
+                    </span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="forceResponseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let mass = 1.0;
+        let damping = 1.0;
+        let stiffness = 10.0;
+        let forceAmplitude = 10.0;
+        let excitationFrequency = 3.16;
+        let showTransient = true;
+        let initialDisplacement = 0.0;
+        let initialVelocity = 0.0;
+        
+        let omega_n = 0;
+        let zeta = 0;
+        let c_critical = 0;
+        let frequencyRatio = 0;
+        let phaseAngle = 0;
+        let dynamicMagnification = 0;
+        let staticDeflection = 0;
+        
+        let time = 0;
+        let totalTime = 0;
+        let animationId;
+        let isPlaying = true;
+        let baseTimeStep = 0.02;
+        let speedMultiplier = 1.0;
+        let timeStep = baseTimeStep * speedMultiplier;
+        let historyMaxTime = 12; // 12 seconds of history
+        
+        // Canvas and chart setup
+        let canvas, ctx;
+        let displacementChart, forceResponseChart, frequencyResponseChart;
+        let timeData = [];
+        let totalResponseData = [];
+        let steadyStateData = [];
+        let forceData = [];
+        let positiveEnvelopeData = [];
+        let negativeEnvelopeData = [];
+        
+        // Calculate system parameters
+        function calculateSystemParams() {
+            if (!mass || !stiffness) return;
+            
+            omega_n = Math.sqrt(stiffness / mass);
+            c_critical = 2 * Math.sqrt(mass * stiffness);
+            zeta = c_critical > 0 ? damping / c_critical : 0;
+            frequencyRatio = omega_n > 0 ? excitationFrequency / omega_n : 0;
+            staticDeflection = forceAmplitude / stiffness; // p₀/k
+            
+            // Calculate phase angle
+            if (Math.abs(frequencyRatio - 1) < 0.001) {
+                phaseAngle = Math.PI / 2; // 90 degrees at resonance
+            } else {
+                phaseAngle = Math.atan2(2 * zeta * frequencyRatio, 1 - frequencyRatio * frequencyRatio);
+                if (frequencyRatio > 1 && phaseAngle < 0) {
+                    phaseAngle += Math.PI;
+                }
+            }
+            
+            // Calculate dynamic magnification factor
+            dynamicMagnification = 1 / Math.sqrt(Math.pow(1 - frequencyRatio * frequencyRatio, 2) + Math.pow(2 * zeta * frequencyRatio, 2));
+        }
+        
+        // Calculate total response using the complete solution with initial conditions
+        function calculateTotalResponse(t) {
+            if (!omega_n || zeta <= 0) return 0;
+            
+            const u_st_o = staticDeflection; // p₀/k
+            const steadyState = calculateSteadyStateResponse(t);
+            
+            // If transient is disabled, return just the steady-state part
+            if (!showTransient) {
+                return steadyState;
+            }
+            
+            // For the general case with initial conditions
+            if (zeta < 1) {
+                // Underdamped case
+                const omega_d = omega_n * Math.sqrt(1 - zeta * zeta);
+                
+                // Calculate constants based on initial conditions and particular solution
+                // At t=0: u(0) = A + u_p(0) = initialDisplacement
+                // At t=0: u̇(0) = -ζωₙA + ωₓB + u̇_p(0) = initialVelocity
+                
+                const u_p_0 = staticDeflection * dynamicMagnification * Math.sin(-phaseAngle);
+                const u_p_dot_0 = staticDeflection * dynamicMagnification * excitationFrequency * Math.cos(-phaseAngle);
+                
+                const A = initialDisplacement - u_p_0;
+                const B = (initialVelocity - u_p_dot_0 + zeta * omega_n * A) / omega_d;
+                
+                const transient = Math.exp(-zeta * omega_n * t) * (A * Math.cos(omega_d * t) + B * Math.sin(omega_d * t));
+                return steadyState + transient;
+                
+            } else if (zeta == 1) {
+                // Critically damped case
+                const u_p_0 = staticDeflection * dynamicMagnification * Math.sin(-phaseAngle);
+                const u_p_dot_0 = staticDeflection * dynamicMagnification * excitationFrequency * Math.cos(-phaseAngle);
+                
+                const A = initialDisplacement - u_p_0;
+                const B = initialVelocity - u_p_dot_0 + omega_n * A;
+                
+                const transient = Math.exp(-omega_n * t) * (A + B * t);
+                return steadyState + transient;
+                
+            } else {
+                // Overdamped case
+                const s1 = -omega_n * (zeta - Math.sqrt(zeta * zeta - 1));
+                const s2 = -omega_n * (zeta + Math.sqrt(zeta * zeta - 1));
+                
+                const u_p_0 = staticDeflection * dynamicMagnification * Math.sin(-phaseAngle);
+                const u_p_dot_0 = staticDeflection * dynamicMagnification * excitationFrequency * Math.cos(-phaseAngle);
+                
+                // Initial conditions for homogeneous solution
+                const u_h_0 = initialDisplacement - u_p_0;
+                const u_h_dot_0 = initialVelocity - u_p_dot_0;
+                
+                const A = (u_h_dot_0 - s2 * u_h_0) / (s1 - s2);
+                const B = (s1 * u_h_0 - u_h_dot_0) / (s1 - s2);
+                
+                const transient = A * Math.exp(s1 * t) + B * Math.exp(s2 * t);
+                return steadyState + transient;
+            }
+        }
+        
+        // Calculate steady-state response
+        function calculateSteadyStateResponse(t) {
+            if (!omega_n) return 0;
+            return staticDeflection * dynamicMagnification * Math.sin(excitationFrequency * t - phaseAngle);
+        }
+        
+        // Calculate applied force
+        function calculateAppliedForce(t) {
+            return forceAmplitude * Math.sin(excitationFrequency * t); // p(t) = p₀ sin(ωt)
+        }
+        
+        // Calculate envelope curves
+        function calculateEnvelopeCurves(t) {
+            if (!omega_n || zeta <= 0) return { positive: 0, negative: 0 };
+            
+            const u_st_o = staticDeflection;
+            const envelopeAmplitude = u_st_o * (1 / (2 * zeta)) * (Math.exp(-zeta * omega_n * t) - 1);
+            
+            return {
+                positive: envelopeAmplitude,
+                negative: -envelopeAmplitude
+            };
+        }
+        
+        // Update displays
+        function updateDisplays() {
+            calculateSystemParams();
+            
+            // Update system properties
+            document.getElementById('omega-n').textContent = omega_n.toFixed(2);
+            document.getElementById('zeta').textContent = zeta.toFixed(3);
+            document.getElementById('frequency-ratio').textContent = frequencyRatio.toFixed(2);
+            document.getElementById('phase-angle').textContent = phaseAngle.toFixed(2);
+            document.getElementById('phase-display').textContent = (phaseAngle * 180 / Math.PI).toFixed(1) + '°';
+            
+            // Update response properties
+            document.getElementById('static-deflection').textContent = staticDeflection.toFixed(3);
+            document.getElementById('dynamic-magnification').textContent = dynamicMagnification.toFixed(2);
+            document.getElementById('max-response').textContent = (staticDeflection * dynamicMagnification).toFixed(3);
+            
+            // Update resonance indicator
+            const resonanceEl = document.getElementById('resonance-indicator');
+            if (Math.abs(frequencyRatio - 1) < 0.1) {
+                resonanceEl.className = 'resonance-indicator at-resonance';
+                resonanceEl.textContent = 'At Resonance!';
+            } else if (Math.abs(frequencyRatio - 1) < 0.3) {
+                resonanceEl.className = 'resonance-indicator near-resonance';
+                resonanceEl.textContent = 'Near Resonance';
+            } else {
+                resonanceEl.className = 'resonance-indicator off-resonance';
+                resonanceEl.textContent = 'Off Resonance';
+            }
+            
+            // Update specific solution equation
+            updateSolutionEquation();
+            updateFrequencyResponseChart();
+        }
+        
+        // Update the specific solution equation
+        function updateSolutionEquation() {
+            const solutionElement = document.getElementById('specific-solution');
+            if (!solutionElement) return;
+            
+            const u_st_o = staticDeflection.toFixed(3);
+            const zetaVal = zeta.toFixed(3);
+            const omegaN = omega_n.toFixed(2);
+            const omegaD = (omega_n * Math.sqrt(Math.max(0, 1 - zeta * zeta))).toFixed(2);
+            const excitationFreq = excitationFrequency.toFixed(2);
+            
+            // Check if we're at resonance
+            if (Math.abs(excitationFrequency - omega_n) < 0.1) {
+                // Resonance case (ω = ωₙ)
+                if (zeta < 1) {
+                    solutionElement.innerHTML = `$$u(t) = ${u_st_o} \\cdot \\frac{1}{2 \\times ${zetaVal}} \\left[ e^{-${zetaVal} \\times ${omegaN} t} \\left( \\cos ${omegaD} t + \\frac{${zetaVal}}{\\sqrt{1-${zetaVal}^2}} \\sin ${omegaD} t \\right) - \\cos ${omegaN} t \\right]$$`;
+                } else {
+                    solutionElement.innerHTML = `$$u(t) = ${u_st_o} \\cdot [1 - e^{-${zetaVal} \\times ${omegaN} t}] \\cos ${omegaN} t$$`;
+                }
+            } else {
+                // Off-resonance case - show steady-state solution
+                const amplitude = (staticDeflection * dynamicMagnification).toFixed(3);
+                const phaseRad = phaseAngle.toFixed(2);
+                solutionElement.innerHTML = `$$u_{ss}(t) = ${amplitude} \\cos(${excitationFreq} t - ${phaseRad}) + \\text{transient}$$`;
+            }
+            
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([solutionElement]).catch(err => {
+                    console.error('MathJax error:', err);
+                });
+            }
+        }
+        
+        // Initialize charts
+        function initCharts() {
+            // Displacement chart
+            const displacementCtx = document.getElementById('displacementChart').getContext('2d');
+            displacementChart = new Chart(displacementCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Total Response',
+                            data: [],
+                            borderColor: '#0066cc',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Steady-State',
+                            data: [],
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Force/10',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Positive Envelope',
+                            data: [],
+                            borderColor: '#ffa500',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Negative Envelope',
+                            data: [],
+                            borderColor: '#ffa500',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Time (s)' },
+                            min: 0,
+                            max: historyMaxTime
+                        },
+                        y: {
+                            title: { display: true, text: 'Displacement' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+            
+            // Force-Response chart
+            const forceResponseCtx = document.getElementById('forceResponseChart').getContext('2d');
+            forceResponseChart = new Chart(forceResponseCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Applied Force',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Displacement',
+                            data: [],
+                            borderColor: '#0066cc',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Time (s)' },
+                            min: 0,
+                            max: historyMaxTime
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Displacement' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'Force (N)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+            
+            // Frequency Response chart
+            const freqResponseCtx = document.getElementById('frequencyResponseChart').getContext('2d');
+            frequencyResponseChart = new Chart(freqResponseCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Magnification Factor',
+                            data: [],
+                            borderColor: '#0066cc',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Current Point',
+                            data: [],
+                            backgroundColor: '#ff0000',
+                            borderColor: '#ff0000',
+                            pointRadius: 6,
+                            showLine: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'ω/ωₙ' },
+                            min: 0,
+                            max: 3
+                        },
+                        y: {
+                            title: { display: true, text: 'Magnification' },
+                            min: 0,
+                            max: 5
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+        
+        // Update frequency response chart
+        function updateFrequencyResponseChart() {
+            if (!frequencyResponseChart) return;
+            
+            const ratios = [];
+            const magnifications = [];
+            
+            for (let r = 0; r <= 3; r += 0.05) {
+                ratios.push(r);
+                const mag = 1 / Math.sqrt(Math.pow(1 - r * r, 2) + Math.pow(2 * zeta * r, 2));
+                magnifications.push(Math.min(mag, 10)); // Cap at 10 for display
+            }
+            
+            frequencyResponseChart.data.labels = ratios;
+            frequencyResponseChart.data.datasets[0].data = magnifications;
+            frequencyResponseChart.data.datasets[1].data = [{x: frequencyRatio, y: dynamicMagnification}];
+            frequencyResponseChart.update('none');
+        }
+        
+        // Draw mass-spring-damper system with harmonic excitation
+        function drawMassSpringDamper() {
+            if (!ctx || !canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const response = calculateTotalResponse(totalTime);
+            const force = calculateAppliedForce(totalTime);
+            const scale = Math.min(20, canvas.width / 20); // Adaptive scale
+            const massX = centerX + response * scale;
+            
+            // Draw fixed wall (left side)
+            const wallX = 50;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(wallX - 10, centerY - 60, 20, 120);
+            
+            // Draw diagonal hatching lines on the wall
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 12; i++) {
+                ctx.beginPath();
+                ctx.moveTo(wallX - 10, centerY - 60 + i * 10);
+                ctx.lineTo(wallX - 20, centerY - 50 + i * 10);
+                ctx.stroke();
+            }
+            
+            // Draw horizontal spring
+            const springY = centerY - 15;
+            const springLeft = wallX + 10;
+            const springRight = massX - 20;
+            const springSegments = 8;
+            const springLength = springRight - springLeft;
+            const segmentLength = springLength / springSegments;
+            
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(springLeft, springY);
+            for (let i = 0; i < springSegments; i++) {
+                const x = springLeft + i * segmentLength;
+                const amplitude = (i % 2 === 0) ? 12 : -12;
+                ctx.lineTo(x + segmentLength / 2, springY + amplitude);
+                ctx.lineTo(x + segmentLength, springY);
+            }
+            ctx.lineTo(springRight, springY);
+            ctx.stroke();
+            
+            // Draw horizontal damper
+            const damperY = centerY + 15;
+            const damperLeft = wallX + 10;
+            const damperRight = massX - 20;
+            const damperMid = (damperLeft + damperRight) / 2;
+            
+            // Damper cylinder (horizontal)
+            ctx.fillStyle = '#999';
+            ctx.fillRect(damperMid - 15, damperY - 8, 30, 16);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(damperMid - 15, damperY - 8, 30, 16);
+            
+            // Damper piston rod (horizontal)
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(damperLeft, damperY);
+            ctx.lineTo(damperMid - 15, damperY);
+            ctx.moveTo(damperMid + 15, damperY);
+            ctx.lineTo(damperRight, damperY);
+            ctx.stroke();
+            
+            // Draw mass
+            const massSize = 40;
+            ctx.fillStyle = '#4a90e2';
+            ctx.fillRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Draw mass outline
+            ctx.strokeStyle = '#2c5aa0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(massX - massSize/2, centerY - massSize/2, massSize, massSize);
+            
+            // Add mass label
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('m', massX, centerY + 3);
+            
+            // Draw equilibrium line (vertical)
+            ctx.strokeStyle = '#00aa00';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - 60);
+            ctx.lineTo(centerX, centerY + 60);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw horizontal force arrow
+            const forceScale = Math.abs(force) > 0 ? Math.max(20, Math.min(60, Math.abs(force) * 3)) : 0;
+            if (forceScale > 0) {
+                ctx.strokeStyle = force > 0 ? '#ff0000' : '#0000ff';
+                ctx.fillStyle = force > 0 ? '#ff0000' : '#0000ff';
+                ctx.lineWidth = 3;
+                
+                const arrowY = centerY;
+                const arrowStartX = massX + massSize/2 + 10;
+                const arrowEndX = arrowStartX + (force > 0 ? forceScale : -forceScale);
+                
+                // Arrow shaft
+                ctx.beginPath();
+                ctx.moveTo(arrowStartX, arrowY);
+                ctx.lineTo(arrowEndX, arrowY);
+                ctx.stroke();
+                
+                // Arrow head
+                ctx.beginPath();
+                ctx.moveTo(arrowEndX, arrowY);
+                if (force > 0) {
+                    ctx.lineTo(arrowEndX - 15, arrowY - 8);
+                    ctx.lineTo(arrowEndX - 15, arrowY + 8);
+                } else {
+                    ctx.lineTo(arrowEndX + 15, arrowY - 8);
+                    ctx.lineTo(arrowEndX + 15, arrowY + 8);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Equilibrium', centerX + 5, centerY - 45);
+            ctx.fillText(`p(t) = ${force.toFixed(1)} N`, 10, 25);
+            ctx.fillText(`u(t) = ${response.toFixed(3)}`, 10, 40);
+            ctx.fillText(`t = ${totalTime.toFixed(2)} s`, canvas.width - 80, 25);
+            
+            // Add component labels
+            ctx.font = '10px Arial';
+            ctx.fillText('k', springLeft + springLength/2 - 5, springY - 20);
+            ctx.fillText('c', damperMid - 5, damperY - 20);
+            ctx.fillText('Fixed', wallX - 25, centerY + 75);
+        }
+        
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                timeStep = baseTimeStep * speedMultiplier;
+                totalTime += timeStep;
+                time += timeStep;
+                
+                // Stop animation after max time
+                if (totalTime > historyMaxTime) {
+                    isPlaying = false;
+                    return;
+                }
+                
+                // Collect data for time history
+                const totalResp = calculateTotalResponse(totalTime);
+                const steadyResp = calculateSteadyStateResponse(totalTime);
+                const force = calculateAppliedForce(totalTime);
+                const envelopes = calculateEnvelopeCurves(totalTime);
+                
+                timeData.push(totalTime);
+                totalResponseData.push(totalResp);
+                steadyStateData.push(steadyResp);
+                forceData.push(force);
+                positiveEnvelopeData.push(envelopes.positive);
+                negativeEnvelopeData.push(envelopes.negative);
+                
+                // Update charts
+                if (displacementChart) {
+                    displacementChart.data.labels = [...timeData];
+                    displacementChart.data.datasets[0].data = [...totalResponseData];
+                    displacementChart.data.datasets[1].data = [...steadyStateData];
+                    displacementChart.data.datasets[2].data = forceData.map(f => f / 10);
+                    displacementChart.data.datasets[3].data = [...positiveEnvelopeData];
+                    displacementChart.data.datasets[4].data = [...negativeEnvelopeData];
+                    displacementChart.update('none');
+                }
+                
+                if (forceResponseChart) {
+                    forceResponseChart.data.labels = [...timeData];
+                    forceResponseChart.data.datasets[0].data = [...forceData];
+                    forceResponseChart.data.datasets[1].data = [...totalResponseData];
+                    forceResponseChart.update('none');
+                }
+                
+                drawMassSpringDamper();
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // Reset animation
+        function resetAnimation() {
+            time = 0;
+            totalTime = 0;
+            timeData = [];
+            totalResponseData = [];
+            steadyStateData = [];
+            forceData = [];
+            positiveEnvelopeData = [];
+            negativeEnvelopeData = [];
+            
+            if (displacementChart) {
+                displacementChart.data.labels = [];
+                displacementChart.data.datasets[0].data = [];
+                displacementChart.data.datasets[1].data = [];
+                displacementChart.data.datasets[2].data = [];
+                displacementChart.data.datasets[3].data = [];
+                displacementChart.data.datasets[4].data = [];
+                displacementChart.update();
+            }
+            
+            if (forceResponseChart) {
+                forceResponseChart.data.labels = [];
+                forceResponseChart.data.datasets[0].data = [];
+                forceResponseChart.data.datasets[1].data = [];
+                forceResponseChart.update();
+            }
+            
+            drawMassSpringDamper();
+        }
+        
+        // Parameter controls
+        function setupControl(paramId, valueId, callback) {
+            const slider = document.getElementById(paramId);
+            const input = document.getElementById(valueId);
+            
+            if (!slider || !input) return;
+            
+            function updateValue(value) {
+                slider.value = value;
+                input.value = value;
+                callback(parseFloat(value));
+                updateDisplays();
+                resetAnimation();
+            }
+            
+            slider.addEventListener('input', (e) => updateValue(e.target.value));
+            input.addEventListener('input', (e) => updateValue(e.target.value));
+        }
+        
+        function setupControls() {
+            setupControl('mass', 'mass-value', (value) => mass = value);
+            setupControl('damping', 'damping-value', (value) => damping = value);
+            setupControl('stiffness', 'stiffness-value', (value) => stiffness = value);
+            setupControl('force-amplitude', 'force-amplitude-value', (value) => forceAmplitude = value);
+            setupControl('frequency', 'frequency-value', (value) => excitationFrequency = value);
+            setupControl('initial-displacement', 'initial-displacement-value', (value) => initialDisplacement = value);
+            setupControl('initial-velocity', 'initial-velocity-value', (value) => initialVelocity = value);
+            
+            // Speed control
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            if (speedSlider && speedInput) {
+                function updateSpeed(value) {
+                    speedMultiplier = parseFloat(value);
+                    speedSlider.value = value;
+                    speedInput.value = value;
+                }
+                speedSlider.addEventListener('input', (e) => updateSpeed(e.target.value));
+                speedInput.addEventListener('input', (e) => updateSpeed(e.target.value));
+            }
+            
+            // Show transient checkbox
+            const showTransientCheckbox = document.getElementById('show-transient');
+            if (showTransientCheckbox) {
+                showTransientCheckbox.addEventListener('change', (e) => {
+                    showTransient = e.target.checked;
+                    resetAnimation();
+                });
+            }
+            
+        }
+        
+        // Setup chart visibility controls
+        function setupChartVisibility() {
+            const setupVisibility = (checkboxId, datasetIndex) => {
+                const checkbox = document.getElementById(checkboxId);
+                if (checkbox && displacementChart) {
+                    checkbox.addEventListener('change', (e) => {
+                        displacementChart.data.datasets[datasetIndex].hidden = !e.target.checked;
+                        displacementChart.update();
+                    });
+                }
+            };
+            
+            setupVisibility('show-total-response', 0);
+            setupVisibility('show-steady-state', 1);
+            setupVisibility('show-force', 2);
+            
+            // Handle both positive and negative envelope together
+            const envelopeCheckbox = document.getElementById('show-envelope');
+            if (envelopeCheckbox && displacementChart) {
+                envelopeCheckbox.addEventListener('change', (e) => {
+                    displacementChart.data.datasets[3].hidden = !e.target.checked; // positive
+                    displacementChart.data.datasets[4].hidden = !e.target.checked; // negative
+                    displacementChart.update();
+                });
+            }
+        }
+        
+        // Initialize app
+        function initializeApp() {
+            try {
+                // Initialize canvas
+                canvas = document.getElementById('animationCanvas');
+                if (!canvas) throw new Error('Canvas not found');
+                
+                const resizeCanvas = () => {
+                    const container = canvas.parentElement;
+                    const rect = container.getBoundingClientRect();
+                    const h2Height = container.querySelector('h2').offsetHeight;
+                    
+                    canvas.width = rect.width - 20;
+                    canvas.height = Math.min(rect.height - h2Height - 20, 180);
+                };
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                ctx = canvas.getContext('2d');
+                
+                initCharts();
+                calculateSystemParams();
+                updateDisplays();
+                setupControls();
+                setupChartVisibility();
+                drawMassSpringDamper();
+                animate();
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
+        
+        // Wait for Chart.js to load
+        let chartLoaded = false;
+        let pageLoaded = false;
+        
+        function checkAndInit() {
+            if (chartLoaded && pageLoaded) {
+                initializeApp();
+            }
+        }
+        
+        function checkChartJs() {
+            if (typeof Chart !== 'undefined') {
+                chartLoaded = true;
+                checkAndInit();
+            } else {
+                setTimeout(checkChartJs, 100);
+            }
+        }
+        
+        window.addEventListener('load', function() {
+            pageLoaded = true;
+            checkAndInit();
+        });
+        
+        checkChartJs();
+    </script>
+</body>
+</html>
