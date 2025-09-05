@@ -305,13 +305,21 @@
                 <h3>Controls</h3>
                 <div class="control-group">
                     <label for="speed">Playback Speed:</label>
-                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
-                    <input type="number" id="speed-value" min="0.1" max="3" step="0.1" value="1">
-                    <span style="font-size: 10px; color: #666;">×</span>
+                    <input type="range" id="speed" min="0.1" max="10" step="0.1" value="1">
+                    <input type="number" id="speed-value" min="0.1" max="10" step="0.1" value="1">
+                    <span style="font-size: 10px; color: #666;">× (auto)</span>
+                </div>
+                <div class="control-group">
+                    <label for="cycles">Cycles to Show:</label>
+                    <input type="range" id="cycles" min="2" max="10" step="0.5" value="6">
+                    <input type="number" id="cycles-value" min="2" max="10" step="0.5" value="6">
                 </div>
                 <div class="control-group">
                     <label for="show-transient">Show Transient:</label>
                     <input type="checkbox" id="show-transient" checked>
+                </div>
+                <div class="control-group">
+                    <button id="restart-btn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">Restart Animation</button>
                 </div>
             </div>
             
@@ -446,6 +454,7 @@
         let showTransient = true;
         let initialDisplacement = 0.0;
         let initialVelocity = 0.0;
+        let cyclesToShow = 6.0;
         
         let omega_n = 0;
         let zeta = 0;
@@ -462,7 +471,7 @@
         let baseTimeStep = 0.02;
         let speedMultiplier = 1.0;
         let timeStep = baseTimeStep * speedMultiplier;
-        let historyMaxTime = 12; // 12 seconds of history
+        let historyMaxTime = 12; // Will be calculated based on cycles
         
         // Canvas and chart setup
         let canvas, ctx;
@@ -496,6 +505,25 @@
             
             // Calculate dynamic magnification factor
             dynamicMagnification = 1 / Math.sqrt(Math.pow(1 - frequencyRatio * frequencyRatio, 2) + Math.pow(2 * zeta * frequencyRatio, 2));
+            
+            // Update history max time based on cycles and excitation frequency
+            if (excitationFrequency > 0) {
+                const period = (2 * Math.PI) / excitationFrequency;
+                historyMaxTime = cyclesToShow * period;
+                
+                // Auto-adjust playback speed: fit cyclesToShow in 2 seconds
+                const targetRealTime = 2.0; // 2 seconds real time
+                const targetSimTime = cyclesToShow * period; // Simulation time for selected cycles
+                const autoSpeedMultiplier = targetSimTime / targetRealTime; // Speed to achieve target
+                
+                // Adaptive time step: ensure at least 200 points per cycle for smooth curves
+                const minPointsPerCycle = 200;
+                const maxTimeStep = period / minPointsPerCycle;
+                baseTimeStep = Math.min(0.02, maxTimeStep); // Use smaller time step for low frequencies
+                
+                // Update speed controls to show auto-calculated speed
+                updateSpeedControls(autoSpeedMultiplier);
+            }
         }
         
         // Calculate total response using the complete solution with initial conditions
@@ -612,9 +640,53 @@
                 resonanceEl.textContent = 'Off Resonance';
             }
             
+            // Update chart time axes with new historyMaxTime
+            updateChartTimeAxes();
+            
             // Update specific solution equation
             updateSolutionEquation();
             updateFrequencyResponseChart();
+        }
+        
+        // Update chart time axes
+        function updateChartTimeAxes() {
+            if (displacementChart) {
+                displacementChart.options.scales.x.max = historyMaxTime;
+                displacementChart.update('none');
+            }
+            
+            if (forceResponseChart) {
+                forceResponseChart.options.scales.x.max = historyMaxTime;
+                forceResponseChart.update('none');
+            }
+        }
+        
+        // Update speed controls with auto-calculated speed
+        function updateSpeedControls(autoSpeed) {
+            // Clamp speed to reasonable range
+            const clampedSpeed = Math.max(0.1, Math.min(10.0, autoSpeed));
+            
+            // Update global speed multiplier
+            speedMultiplier = clampedSpeed;
+            
+            // Update UI controls
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            
+            if (speedSlider && speedInput) {
+                // Update slider range if needed for very high/low speeds
+                if (clampedSpeed > parseFloat(speedSlider.max)) {
+                    speedSlider.max = Math.ceil(clampedSpeed);
+                }
+                if (clampedSpeed < parseFloat(speedSlider.min)) {
+                    speedSlider.min = Math.floor(clampedSpeed * 10) / 10;
+                }
+                
+                speedSlider.value = clampedSpeed.toFixed(1);
+                speedInput.value = clampedSpeed.toFixed(1);
+                speedInput.max = speedSlider.max;
+                speedInput.min = speedSlider.min;
+            }
         }
         
         // Update the specific solution equation
@@ -1056,6 +1128,12 @@
             positiveEnvelopeData = [];
             negativeEnvelopeData = [];
             
+            // Restart animation if it was stopped
+            if (!isPlaying) {
+                isPlaying = true;
+                animate();
+            }
+            
             if (displacementChart) {
                 displacementChart.data.labels = [];
                 displacementChart.data.datasets[0].data = [];
@@ -1103,8 +1181,9 @@
             setupControl('frequency', 'frequency-value', (value) => excitationFrequency = value);
             setupControl('initial-displacement', 'initial-displacement-value', (value) => initialDisplacement = value);
             setupControl('initial-velocity', 'initial-velocity-value', (value) => initialVelocity = value);
+            setupControl('cycles', 'cycles-value', (value) => cyclesToShow = value);
             
-            // Speed control
+            // Speed control (allows manual override of auto-speed)
             const speedSlider = document.getElementById('speed');
             const speedInput = document.getElementById('speed-value');
             if (speedSlider && speedInput) {
@@ -1112,6 +1191,7 @@
                     speedMultiplier = parseFloat(value);
                     speedSlider.value = value;
                     speedInput.value = value;
+                    // Note: manual changes will be overridden when parameters change
                 }
                 speedSlider.addEventListener('input', (e) => updateSpeed(e.target.value));
                 speedInput.addEventListener('input', (e) => updateSpeed(e.target.value));
@@ -1123,6 +1203,38 @@
                 showTransientCheckbox.addEventListener('change', (e) => {
                     showTransient = e.target.checked;
                     resetAnimation();
+                });
+            }
+            
+            // Restart button
+            const restartBtn = document.getElementById('restart-btn');
+            if (restartBtn) {
+                restartBtn.addEventListener('click', () => {
+                    // Reset animation time
+                    currentTime = 0;
+                    
+                    // Clear all chart data
+                    charts.displacement.data.datasets.forEach(dataset => {
+                        dataset.data = [];
+                    });
+                    charts.velocity.data.datasets.forEach(dataset => {
+                        dataset.data = [];
+                    });
+                    charts.force.data.datasets.forEach(dataset => {
+                        dataset.data = [];
+                    });
+                    charts.response.data.datasets.forEach(dataset => {
+                        dataset.data = [];
+                    });
+                    
+                    // Update all charts
+                    Object.values(charts).forEach(chart => chart.update('none'));
+                    
+                    // Redraw mass-spring-damper system at initial position
+                    drawMassSpringDamper();
+                    
+                    // Restart animation
+                    animate();
                 });
             }
             
