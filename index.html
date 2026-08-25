@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CIE 512 - Dynamics of Structures</title>
+    <title>CE 512 - Dynamics of Structures</title>
     <!-- Matomo -->
     <script>
       var _paq = window._paq = window._paq || [];
@@ -136,7 +136,24 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 30px;
+            margin-top: 20px;
+        }
+
+        .chapter-section {
+            margin-top: 50px;
+        }
+
+        .chapter-section:first-of-type {
             margin-top: 40px;
+        }
+
+        .chapter-title {
+            color: white;
+            font-size: 1.6rem;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .module-card {
@@ -269,69 +286,82 @@
 
     <div class="container">
         <header class="header">
-            <h1 class="title">CIE 512</h1>
+            <h1 class="title">CE 512</h1>
             <h2 class="subtitle">Dynamics of Structures</h2>
             <div class="course-info">Interactive Simulations & Visualizations</div>
         </header>
 
-        <div class="modules-grid">
-            <!-- Module 1: Undamped Free Vibration -->
-            <div class="module-card" onclick="window.location.href='chapter_2/free_vibration/undamped_free_vibration.html'">
-                <div class="module-icon">🌊</div>
-                <h3 class="module-title">Undamped Free Vibration</h3>
-                <p class="module-description">
-                    Explore the fundamental behavior of single-degree-of-freedom systems undergoing free vibration without damping.
-                </p>
-                <p class="module-topics">
-                    Interactive mass-spring system • Real-time parameter adjustment • Time history analysis
-                </p>
+        <div class="chapter-section">
+            <h2 class="chapter-title">Chapter 1: Introduction</h2>
+            <div class="modules-grid">
+                <!-- 20-Story Building Under El Centro -->
+                <div class="module-card" onclick="window.location.href='chapter_1/earthquake_response/index.html'">
+                    <div class="module-icon">🏙️</div>
+                    <h3 class="module-title">20-Story Building Under El Centro</h3>
+                    <p class="module-description">
+                        Watch an OpenSeesPy time-history analysis of a 3D steel frame respond to the 1940 El Centro earthquake, animated in 3D.
+                    </p>
+                    <p class="module-topics">
+                        Skeleton + facade animation • Synced displacement/velocity/acceleration • Amplification slider
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <!-- Module 2: Damped Free Vibration -->
-            <div class="module-card" onclick="window.location.href='chapter_2/free_vibration/damped_free_vibration.html'">
-                <div class="module-icon">⚡</div>
-                <h3 class="module-title">Damped Free Vibration</h3>
-                <p class="module-description">
-                    Explore the effects of viscous damping on free vibration response with interactive comparisons.
-                </p>
-                <p class="module-topics">
-                    Critical damping • Overdamped response • Underdamped oscillations • Envelope decay
-                </p>
+        <div class="chapter-section">
+            <h2 class="chapter-title">Chapter 2: Single-Degree-of-Freedom Systems</h2>
+            <div class="modules-grid">
+                <!-- Undamped Free Vibration -->
+                <div class="module-card" onclick="window.location.href='chapter_2/free_vibration/undamped_free_vibration.html'">
+                    <div class="module-icon">🌊</div>
+                    <h3 class="module-title">Undamped Free Vibration</h3>
+                    <p class="module-description">
+                        Explore the fundamental behavior of single-degree-of-freedom systems undergoing free vibration without damping.
+                    </p>
+                    <p class="module-topics">
+                        Interactive mass-spring system • Real-time parameter adjustment • Time history analysis
+                    </p>
+                </div>
+
+                <!-- Damped Free Vibration -->
+                <div class="module-card" onclick="window.location.href='chapter_2/free_vibration/damped_free_vibration.html'">
+                    <div class="module-icon">⚡</div>
+                    <h3 class="module-title">Damped Free Vibration</h3>
+                    <p class="module-description">
+                        Explore the effects of viscous damping on free vibration response with interactive comparisons.
+                    </p>
+                    <p class="module-topics">
+                        Critical damping • Overdamped response • Underdamped oscillations • Envelope decay
+                    </p>
+                </div>
+
+                <!-- Harmonic Excitation -->
+                <div class="module-card" onclick="window.location.href='chapter_2/forced_vibration/harmonic_excitation.html'">
+                    <div class="module-icon">📊</div>
+                    <h3 class="module-title">Harmonic Excitation</h3>
+                    <p class="module-description">
+                        Analyze structural response to harmonic loading with real-time frequency response visualization.
+                    </p>
+                    <p class="module-topics">
+                        Frequency response • Resonance • Dynamic amplification • Phase relationships
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <!-- Module 3: Harmonic Excitation -->
-            <div class="module-card" onclick="window.location.href='chapter_2/forced_vibration/harmonic_excitation.html'">
-                <div class="module-icon">📊</div>
-                <h3 class="module-title">Harmonic Excitation</h3>
-                <p class="module-description">
-                    Analyze structural response to harmonic loading with real-time frequency response visualization.
-                </p>
-                <p class="module-topics">
-                    Frequency response • Resonance • Dynamic amplification • Phase relationships
-                </p>
-            </div>
-
-            <!-- Module 4: 20-Story Building Under El Centro -->
-            <div class="module-card" onclick="window.location.href='chapter_1/earthquake_response/index.html'">
-                <div class="module-icon">🏙️</div>
-                <h3 class="module-title">20-Story Building Under El Centro</h3>
-                <p class="module-description">
-                    Watch an OpenSeesPy time-history analysis of a 3D steel frame respond to the 1940 El Centro earthquake, animated in 3D.
-                </p>
-                <p class="module-topics">
-                    Skeleton + facade animation • Synced displacement/velocity/acceleration • Amplification slider
-                </p>
-            </div>
-
-            <div class="module-card coming-soon">
-                <div class="module-icon">🏗️</div>
-                <h3 class="module-title">Multi-DOF Systems</h3>
-                <p class="module-description">
-                    Coming Soon: Multi-degree-of-freedom system dynamics and modal analysis.
-                </p>
-                <p class="module-topics">
-                    Natural modes • Modal superposition • Eigenvalue analysis
-                </p>
+        <div class="chapter-section">
+            <h2 class="chapter-title">Chapters 3 &amp; 4: Multi-Degree-of-Freedom and Nonlinear Systems</h2>
+            <div class="modules-grid">
+                <div class="module-card coming-soon">
+                    <div class="module-icon">🏗️</div>
+                    <h3 class="module-title">MDOF and Nonlinear Demonstrations</h3>
+                    <p class="module-description">
+                        Coming Soon: Multi-degree-of-freedom and nonlinear structural dynamics demonstrations, later this semester.
+                    </p>
+                    <p class="module-topics">
+                        Natural modes • Modal superposition • Eigenvalue analysis • Hysteresis models
+                    </p>
+                </div>
             </div>
         </div>
 
