@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>20-Story Building Under El Centro | CE 512</title>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- Matomo -->
+    <script>
+      var _paq = window._paq = window._paq || [];
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+        var u="https://matomo.waecoco.com/";
+        _paq.push(['setTrackerUrl', u+'matomo.php']);
+        _paq.push(['setSiteId', '12']);
+        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+      })();
+    </script>
+    <!-- End Matomo Code -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #222;
+        }
+        header {
+            text-align: center;
+            padding: 18px 10px 10px 10px;
+            color: white;
+        }
+        header h1 { font-size: 1.6rem; font-weight: 700; }
+        header p { font-size: 0.95rem; opacity: 0.85; margin-top: 4px; }
+        header a.back-link {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        header a.back-link:hover { text-decoration: underline; }
+        .main-container {
+            display: grid;
+            grid-template-columns: 2.1fr 1fr;
+            gap: 14px;
+            max-width: 1700px;
+            margin: 0 auto 24px auto;
+            padding: 0 14px;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            margin-bottom: 14px;
+        }
+        .box h2 {
+            font-size: 1.0rem;
+            margin-bottom: 8px;
+            color: #1e3c72;
+        }
+        #sceneContainer {
+            width: 100%;
+            height: 640px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #0b1220;
+        }
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 6px 0;
+            font-size: 0.85rem;
+        }
+        .controls-row label { min-width: 110px; }
+        .controls-row input[type="range"] { flex: 1; min-width: 120px; }
+        button.ctrl-btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        button.ctrl-btn:hover { background: #2a5298; }
+        .stat-line {
+            font-size: 0.82rem;
+            color: #444;
+            margin: 3px 0;
+        }
+        .chart-box { height: 150px; margin-bottom: 10px; }
+        .legend-swatch {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+        #loadingMsg {
+            color: white;
+            text-align: center;
+            padding: 40px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back-link" href="../../index.html">&larr; Back to CE 512 Simulations</a>
+        <h1>20-Story Steel Frame Under the 1940 El Centro Earthquake</h1>
+        <p>OpenSeesPy time-history analysis &middot; three.js 3D animation &middot; CE 512, Chapter 1</p>
+    </header>
+
+    <div id="loadingMsg">Loading building_data.json&hellip;</div>
+
+    <div class="main-container" id="mainContainer" style="display:none;">
+        <div>
+            <div class="box">
+                <h2>3D Response Animation</h2>
+                <div id="sceneContainer"></div>
+                <div class="controls-row">
+                    <button class="ctrl-btn" id="playBtn">Play</button>
+                    <button class="ctrl-btn" id="pauseBtn">Pause</button>
+                    <button class="ctrl-btn" id="restartBtn">Restart</button>
+                    <span class="stat-line" id="timeLabel">t = 0.00 s</span>
+                </div>
+                <div class="controls-row">
+                    <label for="timeScrubber">Time</label>
+                    <input type="range" id="timeScrubber" min="0" max="1" step="1" value="0">
+                </div>
+                <div class="controls-row">
+                    <label for="ampSlider">Amplification</label>
+                    <input type="range" id="ampSlider" min="1" max="300" step="1" value="100">
+                    <span class="stat-line" id="ampLabel">100&times;</span>
+                </div>
+                <div class="controls-row">
+                    <label for="colorModeSelect">Facade color</label>
+                    <select id="colorModeSelect">
+                        <option value="none">Off (semi-transparent)</option>
+                        <option value="drift">By inter-story drift</option>
+                        <option value="accel">By floor acceleration</option>
+                    </select>
+                </div>
+                <p class="stat-line">Real peak roof displacement (unamplified) is shown in the
+                Model Summary box &mdash; it is a few tenths of a meter over a 70&nbsp;m building,
+                which is why the amplification slider defaults to 100&times; for visibility.</p>
+            </div>
+        </div>
+
+        <div>
+            <div class="box">
+                <h2>Model Summary</h2>
+                <div id="modelSummary"></div>
+            </div>
+            <div class="box">
+                <h2>Ground Motion (El Centro, N-S)</h2>
+                <div class="chart-box"><canvas id="groundMotionChart"></canvas></div>
+            </div>
+            <div class="box">
+                <h2>Roof Response</h2>
+                <div class="chart-box"><canvas id="roofDispChart"></canvas></div>
+                <div class="chart-box"><canvas id="roofVelChart"></canvas></div>
+                <div class="chart-box"><canvas id="roofAccChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (async function main() {
+        const response = await fetch('building_data.json');
+        const data = await response.json();
+
+        document.getElementById('loadingMsg').style.display = 'none';
+        document.getElementById('mainContainer').style.display = 'grid';
+
+        const meta = data.meta;
+        const nx = meta.n_bay + 1;
+        const ny = meta.n_bay + 1;
+        const nodesPerLevel = nx * ny;
+        const nLevels = meta.n_stories + 1;
+        const nSteps = data.response.time.length;
+
+        // ---- Model summary panel ----
+        const periodsStr = meta.periods_s.map(function (p) { return p.toFixed(2); }).join(', ');
+        document.getElementById('modelSummary').innerHTML =
+            '<p class="stat-line"><b>' + meta.n_stories + ' stories</b>, ' +
+            meta.n_bay + '&times;' + meta.n_bay + ' bays, ' +
+            meta.story_height + ' m story height</p>' +
+            '<p class="stat-line">Footprint: ' + (meta.n_bay * meta.bay_width) +
+            ' m &times; ' + (meta.n_bay * meta.bay_width) + ' m &middot; Height: ' +
+            (meta.n_stories * meta.story_height).toFixed(1) + ' m</p>' +
+            '<p class="stat-line">First 6 periods (s): ' + periodsStr + '</p>' +
+            '<p class="stat-line">Peak roof displacement: ' +
+            meta.roof_disp_max_m.toFixed(3) + ' m (unamplified)</p>' +
+            '<p class="stat-line">Peak base shear: ' +
+            (meta.base_shear_max_N / 1000).toFixed(0) + ' kN</p>' +
+            '<p class="stat-line">Record: dt=' + meta.dt + ' s, decimated to ' +
+            meta.dt_decimated.toFixed(3) + ' s for this animation (' + nSteps + ' frames)</p>';
+
+        // ================= three.js scene =================
+        const container = document.getElementById('sceneContainer');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b1220);
+
+        const camera = new THREE.PerspectiveCamera(
+            45, container.clientWidth / container.clientHeight, 0.1, 2000);
+        const planX = meta.n_bay * meta.bay_width;
+        const planY = meta.n_bay * meta.bay_width;
+        const buildingHeight = meta.n_stories * meta.story_height;
+        camera.position.set(planX * 3, buildingHeight * 0.75, planY * 3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(planX / 2, buildingHeight / 2, planY / 2);
+        controls.update();
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(planX * 2, buildingHeight * 2, planY);
+        scene.add(dirLight);
+
+        // ground plane
+        const groundGeo = new THREE.PlaneGeometry(planX * 8, planY * 8);
+        const groundMat = new THREE.MeshBasicMaterial({
+            color: 0x16213e, side: THREE.DoubleSide });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.set(planX / 2, 0, planY / 2);
+        scene.add(ground);
+
+        const grid = new THREE.GridHelper(Math.max(planX, planY) * 6, 24, 0x334466, 0x223355);
+        grid.position.set(planX / 2, 0.01, planY / 2);
+        scene.add(grid);
+
+        // ---- skeleton (LineSegments) ----
+        const baseNodes = data.skeleton.nodes; // [ [x,y,z], ... ] undeformed
+        const elements = data.skeleton.elements; // [ [i,j], ... ]
+        const nNodes = baseNodes.length;
+
+        const skelPositions = new Float32Array(elements.length * 2 * 3);
+        const skelGeo = new THREE.BufferGeometry();
+        skelGeo.setAttribute('position', new THREE.BufferAttribute(skelPositions, 3));
+        const skelMat = new THREE.LineBasicMaterial({ color: 0x9fd3ff, linewidth: 1 });
+        const skeleton = new THREE.LineSegments(skelGeo, skelMat);
+        scene.add(skeleton);
+
+        // current displaced node coordinates, recomputed each frame
+        const dispNodes = new Float32Array(nNodes * 3);
+
+        function levelOfNode(nodeIndex) {
+            return Math.floor(nodeIndex / nodesPerLevel);
+        }
+
+        function updateDisplacedNodes(frameIndex, amplification) {
+            const dispRow = data.response.disp_x_m[frameIndex];
+            for (let i = 0; i < nNodes; i++) {
+                const level = levelOfNode(i);
+                const base = baseNodes[i];
+                dispNodes[i * 3 + 0] = base[0] + dispRow[level] * amplification;
+                dispNodes[i * 3 + 1] = base[2]; // three.js Y = model Z (up)
+                dispNodes[i * 3 + 2] = base[1]; // three.js Z = model Y
+            }
+        }
+
+        function updateSkeletonGeometry() {
+            for (let e = 0; e < elements.length; e++) {
+                const n1 = elements[e][0];
+                const n2 = elements[e][1];
+                skelPositions[e * 6 + 0] = dispNodes[n1 * 3 + 0];
+                skelPositions[e * 6 + 1] = dispNodes[n1 * 3 + 1];
+                skelPositions[e * 6 + 2] = dispNodes[n1 * 3 + 2];
+                skelPositions[e * 6 + 3] = dispNodes[n2 * 3 + 0];
+                skelPositions[e * 6 + 4] = dispNodes[n2 * 3 + 1];
+                skelPositions[e * 6 + 5] = dispNodes[n2 * 3 + 2];
+            }
+            skelGeo.attributes.position.needsUpdate = true;
+        }
+
+        // ---- facade: one quad mesh per story per side (4 sides) ----
+        const floorOutlines = data.floor_outlines; // per level, 4 corners (undeformed)
+        const facadeMeshes = []; // { level (lower), side, mesh, geo }
+
+        function sideCornerIndices(side) {
+            // outline corners are [ (0,0), (Lx,0), (Lx,Ly), (0,Ly) ]
+            if (side === 0) return [0, 1]; // south
+            if (side === 1) return [1, 2]; // east
+            if (side === 2) return [2, 3]; // north
+            return [3, 0]; // west
+        }
+
+        for (let level = 0; level < meta.n_stories; level++) {
+            for (let side = 0; side < 4; side++) {
+                const geo = new THREE.BufferGeometry();
+                const positions = new Float32Array(4 * 3); // 2 corners x 2 levels
+                geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geo.setIndex([0, 1, 2, 0, 2, 3]);
+                const mat = new THREE.MeshBasicMaterial({
+                    color: 0x4a90d9, transparent: true, opacity: 0.28,
+                    side: THREE.DoubleSide, depthWrite: false });
+                const mesh = new THREE.Mesh(geo, mat);
+                scene.add(mesh);
+                facadeMeshes.push({ level: level, side: side, mesh: mesh, geo: geo, mat: mat });
+            }
+        }
+
+        function facadeCorner(frameIndex, amplification, level, cornerIdx) {
+            const corner = floorOutlines[level][cornerIdx];
+            const dispRow = data.response.disp_x_m[frameIndex];
+            const ux = dispRow[level] * amplification;
+            return [corner[0] + ux, corner[2], corner[1]];
+        }
+
+        function updateFacadeGeometry(frameIndex, amplification) {
+            for (const f of facadeMeshes) {
+                const idx = sideCornerIndices(f.side);
+                const c0Lo = facadeCorner(frameIndex, amplification, f.level, idx[0]);
+                const c1Lo = facadeCorner(frameIndex, amplification, f.level, idx[1]);
+                const c0Hi = facadeCorner(frameIndex, amplification, f.level + 1, idx[0]);
+                const c1Hi = facadeCorner(frameIndex, amplification, f.level + 1, idx[1]);
+                const pos = f.geo.attributes.position.array;
+                pos[0] = c0Lo[0]; pos[1] = c0Lo[1]; pos[2] = c0Lo[2];
+                pos[3] = c1Lo[0]; pos[4] = c1Lo[1]; pos[5] = c1Lo[2];
+                pos[6] = c1Hi[0]; pos[7] = c1Hi[1]; pos[8] = c1Hi[2];
+                pos[9] = c0Hi[0]; pos[10] = c0Hi[1]; pos[11] = c0Hi[2];
+                f.geo.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // response-based facade coloring
+        const driftMax = (function () {
+            let m = 0;
+            for (let t = 0; t < nSteps; t++) {
+                const row = data.response.disp_x_m[t];
+                for (let lvl = 0; lvl < meta.n_stories; lvl++) {
+                    const d = Math.abs(row[lvl + 1] - row[lvl]) / meta.story_height;
+                    if (d > m) m = d;
+                }
+            }
+            return m || 1e-9;
+        })();
+        const floorAccEnvAbsMax = data.response.acc_envelope_ms2.map(
+            function (e) { return Math.max(Math.abs(e[0]), Math.abs(e[1])); });
+        const roofAccAbsMax = Math.max.apply(null,
+            data.response.roof_acc_ms2.map(function (a) { return Math.abs(a); })) || 1e-9;
+        const accMax = Math.max.apply(null, floorAccEnvAbsMax) || 1e-9;
+
+        function colorFor(value01) {
+            // blue (0) -> yellow (0.5) -> red (1)
+            const c = new THREE.Color();
+            if (value01 < 0.5) {
+                c.setRGB(value01 * 2, value01 * 2, 1 - value01 * 2);
+            } else {
+                const v = (value01 - 0.5) * 2;
+                c.setRGB(1, 1 - v, 0);
+            }
+            return c;
+        }
+
+        function updateFacadeColor(frameIndex) {
+            const mode = document.getElementById('colorModeSelect').value;
+            const dispRow = data.response.disp_x_m[frameIndex];
+            for (const f of facadeMeshes) {
+                if (mode === 'none') {
+                    f.mat.color.setHex(0x4a90d9);
+                    f.mat.opacity = 0.28;
+                    continue;
+                }
+                f.mat.opacity = 0.75;
+                if (mode === 'drift') {
+                    const d = Math.abs(dispRow[f.level + 1] - dispRow[f.level]) / meta.story_height;
+                    f.mat.color.copy(colorFor(Math.min(d / driftMax, 1)));
+                } else {
+                    // Only the roof's acceleration is stored as a full time
+                    // history (per the JSON size budget); other floors only
+                    // have a static min/max envelope. Approximate each
+                    // floor's current acceleration as its own envelope peak
+                    // scaled by the roof's current fraction of its own peak
+                    // -- exact for the roof, a reasonable shape estimate
+                    // elsewhere since response is dominated by mode 1.
+                    const roofFrac = Math.abs(data.response.roof_acc_ms2[frameIndex]) /
+                        roofAccAbsMax;
+                    const approxAcc = floorAccEnvAbsMax[f.level] * roofFrac;
+                    f.mat.color.copy(colorFor(Math.min(approxAcc / accMax, 1)));
+                }
+            }
+        }
+
+        // ---- ground motion arrow at base ----
+        const arrowDir = new THREE.Vector3(1, 0, 0);
+        const arrowOrigin = new THREE.Vector3(planX / 2, 1.0, planY / 2);
+        const groundArrow = new THREE.ArrowHelper(
+            arrowDir, arrowOrigin, 1, 0xff5555, 2, 1.2);
+        scene.add(groundArrow);
+        const accelAbsMax = Math.max.apply(null,
+            data.ground_motion.accel_g.map(function (a) { return Math.abs(a); })) || 1e-9;
+
+        function updateGroundArrow(frameIndex) {
+            const a = data.ground_motion.accel_g[frameIndex];
+            const mag = Math.abs(a) / accelAbsMax;
+            const len = 3 + mag * (planX * 0.9);
+            groundArrow.setDirection(new THREE.Vector3(a >= 0 ? 1 : -1, 0, 0));
+            groundArrow.setLength(len, Math.min(len * 0.25, 4), Math.min(len * 0.15, 2));
+        }
+
+        // ================= playback state =================
+        let currentFrame = 0;
+        let amplification = 100;
+        let playing = false;
+        let lastRealTime = null;
+        const scrubber = document.getElementById('timeScrubber');
+        scrubber.max = String(nSteps - 1);
+
+        function renderFrame(frameIndex) {
+            currentFrame = frameIndex;
+            updateDisplacedNodes(frameIndex, amplification);
+            updateSkeletonGeometry();
+            updateFacadeGeometry(frameIndex, amplification);
+            updateFacadeColor(frameIndex);
+            updateGroundArrow(frameIndex);
+            document.getElementById('timeLabel').textContent =
+                't = ' + data.response.time[frameIndex].toFixed(2) + ' s';
+            scrubber.value = String(frameIndex);
+            updateChartCursors(frameIndex);
+        }
+
+        function animate(nowMs) {
+            requestAnimationFrame(animate);
+            if (playing) {
+                if (lastRealTime === null) lastRealTime = nowMs;
+                const elapsed = (nowMs - lastRealTime) / 1000;
+                if (elapsed >= meta.dt_decimated) {
+                    lastRealTime = nowMs;
+                    let next = currentFrame + 1;
+                    if (next >= nSteps) { next = 0; playing = false; }
+                    renderFrame(next);
+                }
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        requestAnimationFrame(animate);
+
+        document.getElementById('playBtn').addEventListener('click', function () {
+            playing = true; lastRealTime = null;
+        });
+        document.getElementById('pauseBtn').addEventListener('click', function () {
+            playing = false;
+        });
+        document.getElementById('restartBtn').addEventListener('click', function () {
+            playing = false; renderFrame(0);
+        });
+        scrubber.addEventListener('input', function () {
+            playing = false;
+            renderFrame(parseInt(scrubber.value, 10));
+        });
+        document.getElementById('ampSlider').addEventListener('input', function (e) {
+            amplification = parseFloat(e.target.value);
+            document.getElementById('ampLabel').textContent = amplification + '×';
+            renderFrame(currentFrame);
+        });
+        document.getElementById('colorModeSelect').addEventListener('change', function () {
+            renderFrame(currentFrame);
+        });
+        window.addEventListener('resize', function () {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // ================= charts =================
+        const chartOpts = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { maxTicksLimit: 6, font: { size: 9 } } },
+                y: { ticks: { font: { size: 9 } } },
+            },
+            elements: { point: { radius: 0 } },
+        };
+
+        function makeCursorPlugin() {
+            return {
+                id: 'cursorLine',
+                afterDraw: function (chart) {
+                    const idx = chart.$cursorIndex || 0;
+                    const meta0 = chart.getDatasetMeta(0);
+                    if (!meta0.data[idx]) return;
+                    const x = meta0.data[idx].x;
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.strokeStyle = '#ff3333';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x, chart.chartArea.top);
+                    ctx.lineTo(x, chart.chartArea.bottom);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            };
+        }
+
+        const groundMotionChart = new Chart(
+            document.getElementById('groundMotionChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.ground_motion.time,
+                    datasets: [{ data: data.ground_motion.accel_g, borderColor: '#ff8a3d',
+                                 borderWidth: 1 }],
+                },
+                options: chartOpts,
+                plugins: [makeCursorPlugin()],
+            });
+
+        const roofDispChart = new Chart(
+            document.getElementById('roofDispChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.response.time,
+                    datasets: [{
+                        data: data.response.disp_x_m.map(function (r) { return r[r.length - 1]; }),
+                        borderColor: '#1e88e5', borderWidth: 1 }],
+                },
+                options: chartOpts,
+                plugins: [makeCursorPlugin()],
+            });
+
+        const roofVelChart = new Chart(
+            document.getElementById('roofVelChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.response.time,
+                    datasets: [{ data: data.response.roof_vel_ms, borderColor: '#43a047',
+                                 borderWidth: 1 }],
+                },
+                options: chartOpts,
+                plugins: [makeCursorPlugin()],
+            });
+
+        const roofAccChart = new Chart(
+            document.getElementById('roofAccChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.response.time,
+                    datasets: [{ data: data.response.roof_acc_ms2, borderColor: '#e53935',
+                                 borderWidth: 1 }],
+                },
+                options: chartOpts,
+                plugins: [makeCursorPlugin()],
+            });
+
+        [groundMotionChart, roofDispChart, roofVelChart, roofAccChart].forEach(
+            function (c) { c.canvas.parentNode.style.position = 'relative'; });
+
+        function updateChartCursors(frameIndex) {
+            [groundMotionChart, roofDispChart, roofVelChart, roofAccChart].forEach(
+                function (c) { c.$cursorIndex = frameIndex; c.draw(); });
+        }
+
+        // labels for chart axis titles (small text under each chart)
+        document.getElementById('groundMotionChart').parentNode.insertAdjacentHTML(
+            'beforeend', '<div class="stat-line">Accel (g) vs time (s)</div>');
+        document.getElementById('roofDispChart').parentNode.insertAdjacentHTML(
+            'beforeend', '<div class="stat-line">Roof displacement (m) vs time (s)</div>');
+        document.getElementById('roofVelChart').parentNode.insertAdjacentHTML(
+            'beforeend', '<div class="stat-line">Roof velocity (m/s) vs time (s)</div>');
+        document.getElementById('roofAccChart').parentNode.insertAdjacentHTML(
+            'beforeend', '<div class="stat-line">Roof acceleration (m/s&sup2;) vs time (s)</div>');
+
+        renderFrame(0);
+    })();
+    </script>
+</body>
+</html>
