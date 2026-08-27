@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step-Force Response</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Matomo -->
+    <script>
+      var _paq = window._paq = window._paq || [];
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+        var u="https://matomo.waecoco.com/";
+        _paq.push(['setTrackerUrl', u+'matomo.php']);
+        _paq.push(['setSiteId', '12']);
+        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+      })();
+    </script>
+    <!-- End Matomo Code -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        .main-container {
+            display: grid;
+            grid-template-rows: 35vh 1fr;
+            gap: 15px;
+            max-width: 1600px;
+            height: 88vh;
+            margin: 0 auto;
+        }
+        .top-row {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
+        }
+        .controls {
+            text-align: center;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .control-group {
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 11px;
+        }
+        input[type="range"] {
+            flex: 1;
+            margin: 0 8px;
+        }
+        input[type="number"] {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 10px;
+        }
+        .equation {
+            text-align: center;
+            font-size: 10px;
+            margin: 2px 0;
+            padding: 4px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .animation-canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+        }
+        h1 {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 700;
+            text-shadow: 0 2px 20px rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        h3 {
+            font-size: 11px;
+            color: #333;
+            margin: 3px 0 2px 0;
+            font-weight: 600;
+        }
+        .parameter-display {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2px;
+            font-size: 9px;
+        }
+        .parameter-table th, .parameter-table td {
+            padding: 1px;
+            text-align: center;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        .parameter-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .damping-indicator {
+            text-align: center;
+            padding: 3px;
+            margin: 3px 0;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .under-damped {
+            background: #d4f5d4;
+            color: #2d6a2d;
+        }
+        .critically-damped {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .over-damped {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .legend-item {
+            display: inline-flex;
+            margin: 0 5px;
+            font-size: 11px;
+            align-items: center;
+            gap: 3px;
+        }
+        .legend-checkbox {
+            width: 12px;
+            height: 12px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .legend-dashed {
+            background-image: repeating-linear-gradient(
+                to right,
+                transparent,
+                transparent 2px,
+                currentColor 2px,
+                currentColor 4px
+            );
+            background-color: transparent !important;
+        }
+        .bottom-charts {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Response of an SDOF System to a Suddenly Applied (Step) Force</h1>
+
+    <div class="main-container">
+        <!-- Top Row: Controls, Solution, Animation -->
+        <div class="top-row">
+            <!-- Left: Parameter Controls -->
+            <div class="box controls">
+                <h2>System Parameters</h2>
+                <div class="control-group">
+                    <label for="damping-ratio">Damping ratio &zeta;:</label>
+                    <input type="range" id="damping-ratio" min="0" max="1" step="0.01" value="0.05">
+                    <input type="number" id="damping-ratio-value" min="0" max="1" step="0.01" value="0.05">
+                    <span style="font-size: 10px; color: #666;"></span>
+                </div>
+                <div class="control-group">
+                    <label for="natural-period">Natural period T&#8345;:</label>
+                    <input type="range" id="natural-period" min="0.2" max="3.0" step="0.05" value="1.00">
+                    <input type="number" id="natural-period-value" min="0.2" max="3.0" step="0.05" value="1.00">
+                    <span style="font-size: 10px; color: #666;">s</span>
+                </div>
+                <div class="control-group">
+                    <label for="static-deflection">Static defl. P&#8320;/k:</label>
+                    <input type="range" id="static-deflection" min="0.01" max="0.20" step="0.005" value="0.050">
+                    <input type="number" id="static-deflection-value" min="0.01" max="0.20" step="0.005" value="0.050">
+                    <span style="font-size: 10px; color: #666;">m</span>
+                </div>
+
+                <h3>Comparison Overlays</h3>
+                <div class="control-group">
+                    <label for="show-undamped">Show &zeta;=0 (undamped):</label>
+                    <input type="checkbox" id="show-undamped" checked>
+                </div>
+                <div class="control-group">
+                    <label for="show-heavy">Show heavily damped (&zeta;=3):</label>
+                    <input type="checkbox" id="show-heavy">
+                </div>
+
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="speed">Playback Speed:</label>
+                    <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+                    <input type="number" id="speed-value" min="0.1" max="5" step="0.1" value="1">
+                    <span style="font-size: 10px; color: #666;">&times;</span>
+                </div>
+                <div class="control-group">
+                    <button id="restart-btn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">Restart Animation</button>
+                </div>
+            </div>
+
+            <!-- Middle: Analytical Solution -->
+            <div class="box">
+                <h2>Complete Underdamped Solution</h2>
+                <div class="equation">
+                    $$u(t) = \frac{P_0}{k}\left[1 - e^{-\zeta\omega_n t}\left(\cos\omega_D t + \frac{\zeta}{\sqrt{1-\zeta^2}}\sin\omega_D t\right)\right]$$
+                </div>
+
+                <h3>Current Solution</h3>
+                <div id="specific-solution" class="equation">
+                    $$u(t) = 0.050\left[1-e^{-0.314t}(\cos 6.275t + 0.050\sin 6.275t)\right]$$
+                </div>
+
+                <h3>System Properties</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$\omega_n$ (rad/s)</th>
+                        <th>$T_n$ (s)</th>
+                        <th>$\omega_D$ (rad/s)</th>
+                        <th>$T_D$ (s)</th>
+                    </tr>
+                    <tr>
+                        <td><span id="omega-n">6.28</span></td>
+                        <td><span id="Tn-value">1.00</span></td>
+                        <td><span id="omega-D">6.28</span></td>
+                        <td><span id="TD-value">1.00</span></td>
+                    </tr>
+                </table>
+
+                <h3>Response Properties</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <th>$u_{st}=P_0/k$</th>
+                        <th>$u_{\max}$</th>
+                        <th>$u_{\max}/u_{st}$</th>
+                        <th>Peak time $t_1$</th>
+                    </tr>
+                    <tr>
+                        <td><span id="ust-value">0.0500</span></td>
+                        <td><span id="umax-value">0.0927</span></td>
+                        <td><span id="overshoot-value">1.85</span></td>
+                        <td><span id="peaktime-value">0.50</span></td>
+                    </tr>
+                </table>
+
+                <div id="damping-indicator" class="damping-indicator under-damped">
+                    Underdamped (&zeta; &lt; 1)
+                </div>
+            </div>
+
+            <!-- Right: System Animation -->
+            <div class="box">
+                <h2>System Animation</h2>
+                <canvas id="animationCanvas" class="animation-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Bottom Row: Time History Chart -->
+        <div class="bottom-charts">
+            <div class="box">
+                <h2>Displacement Response</h2>
+                <div style="text-align: center; margin-bottom: 5px;">
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-total-response" class="legend-checkbox" checked>
+                        <span class="legend-color" style="background: #0066cc;"></span>
+                        <label for="show-total-response">u(t)</label>
+                    </span>
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-static-line" class="legend-checkbox" checked>
+                        <span class="legend-color legend-dashed" style="color: #666;"></span>
+                        <label for="show-static-line">Static line P&#8320;/k</label>
+                    </span>
+                    <span class="legend-item">
+                        <input type="checkbox" id="show-envelope" class="legend-checkbox" checked>
+                        <span class="legend-color legend-dashed" style="color: #ffa500;"></span>
+                        <label for="show-envelope">Envelope</label>
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color legend-dashed" style="color: #dc3545;"></span>
+                        <label>&zeta;=0 overlay</label>
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color legend-dashed" style="color: #6f42c1;"></span>
+                        <label>Heavy-damping overlay</label>
+                    </span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="displacementChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let zeta = 0.05;
+        let naturalPeriod = 1.00;
+        let staticDeflection = 0.050; // P0/k, m
+        let showUndamped = true;
+        let showHeavy = false;
+
+        let omega_n = 0;
+        let omega_D = 0;
+        let dampedPeriod = 0;
+        let umax = 0;
+        let peakTime = 0;
+        let overshootRatio = 0;
+
+        let time = 0;
+        let totalTime = 0;
+        let animationId;
+        let isPlaying = true;
+        let baseTimeStep = 0.01;
+        let speedMultiplier = 1.0;
+        let timeStep = baseTimeStep * speedMultiplier;
+        let historyMaxTime = 3.0;
+
+        // Canvas and chart setup
+        let canvas, ctx;
+        let displacementChart;
+        let timeData = [];
+        let totalResponseData = [];
+        let staticLineData = [];
+        let positiveEnvelopeData = [];
+        let negativeEnvelopeData = [];
+        let undampedData = [];
+        let heavyDampedData = [];
+
+        const HEAVY_ZETA = 3.0; // heavily overdamped comparison case
+
+        // Generic closed-form step-force response for any zeta >= 0
+        function stepResponse(t, zetaVal, omegaNVal, ustVal) {
+            if (t < 0) return 0;
+            if (zetaVal <= 0) {
+                return ustVal * (1 - Math.cos(omegaNVal * t));
+            } else if (zetaVal < 1) {
+                const wd = omegaNVal * Math.sqrt(1 - zetaVal * zetaVal);
+                const ratio = zetaVal / Math.sqrt(1 - zetaVal * zetaVal);
+                return ustVal * (1 - Math.exp(-zetaVal * omegaNVal * t) *
+                    (Math.cos(wd * t) + ratio * Math.sin(wd * t)));
+            } else if (Math.abs(zetaVal - 1) < 1e-9) {
+                return ustVal * (1 - (1 + omegaNVal * t) * Math.exp(-omegaNVal * t));
+            } else {
+                const wn = omegaNVal, z = zetaVal;
+                const s1 = -wn * (z - Math.sqrt(z * z - 1));
+                const s2 = -wn * (z + Math.sqrt(z * z - 1));
+                const A = ustVal * s2 / (s1 - s2);
+                const B = -ustVal - A;
+                return ustVal + A * Math.exp(s1 * t) + B * Math.exp(s2 * t);
+            }
+        }
+
+        // Calculate system parameters
+        function calculateSystemParams() {
+            if (!naturalPeriod) return;
+
+            omega_n = 2 * Math.PI / naturalPeriod;
+
+            if (zeta < 1) {
+                omega_D = omega_n * Math.sqrt(1 - zeta * zeta);
+                dampedPeriod = 2 * Math.PI / omega_D;
+                peakTime = Math.PI / omega_D;
+                overshootRatio = 1 + Math.exp(-zeta * Math.PI / Math.sqrt(1 - zeta * zeta));
+                umax = staticDeflection * overshootRatio;
+            } else {
+                omega_D = 0;
+                dampedPeriod = 0;
+                peakTime = NaN;
+                overshootRatio = NaN;
+                umax = NaN;
+            }
+
+            historyMaxTime = 3.0 * naturalPeriod;
+
+            // Adaptive time step: ensure smooth curves
+            const minPointsPerPeriod = 300;
+            baseTimeStep = Math.min(0.01, naturalPeriod / minPointsPerPeriod);
+
+            // Auto speed: fit historyMaxTime into ~3 seconds of real time
+            const targetRealTime = 3.0;
+            const autoSpeedMultiplier = historyMaxTime / targetRealTime;
+            updateSpeedControls(autoSpeedMultiplier);
+        }
+
+        // Calculate envelope curves (bounds the oscillation about u_st)
+        function calculateEnvelope(t) {
+            if (zeta <= 0 || zeta >= 1) {
+                return { positive: staticDeflection, negative: staticDeflection };
+            }
+            const ratio = zeta / Math.sqrt(1 - zeta * zeta);
+            const bound = staticDeflection * Math.exp(-zeta * omega_n * t) *
+                Math.sqrt(1 + ratio * ratio);
+            return {
+                positive: staticDeflection + bound,
+                negative: staticDeflection - bound
+            };
+        }
+
+        // Update displays
+        function updateDisplays() {
+            calculateSystemParams();
+
+            document.getElementById('omega-n').textContent = omega_n.toFixed(3);
+            document.getElementById('Tn-value').textContent = naturalPeriod.toFixed(3);
+            document.getElementById('omega-D').textContent = (zeta < 1 ? omega_D.toFixed(3) : 'n/a');
+            document.getElementById('TD-value').textContent = (zeta < 1 ? dampedPeriod.toFixed(3) : 'n/a');
+
+            document.getElementById('ust-value').textContent = staticDeflection.toFixed(4);
+            document.getElementById('umax-value').textContent = (zeta < 1 ? umax.toFixed(4) : 'n/a (no overshoot)');
+            document.getElementById('overshoot-value').textContent = (zeta < 1 ? overshootRatio.toFixed(3) : 'n/a');
+            document.getElementById('peaktime-value').textContent = (zeta < 1 ? peakTime.toFixed(3) : 'n/a');
+
+            const dampingEl = document.getElementById('damping-indicator');
+            if (zeta < 1) {
+                dampingEl.className = 'damping-indicator under-damped';
+                dampingEl.textContent = 'Underdamped (ζ < 1)';
+            } else if (Math.abs(zeta - 1) < 1e-9) {
+                dampingEl.className = 'damping-indicator critically-damped';
+                dampingEl.textContent = 'Critically Damped (ζ = 1)';
+            } else {
+                dampingEl.className = 'damping-indicator over-damped';
+                dampingEl.textContent = 'Overdamped (ζ > 1)';
+            }
+
+            updateChartTimeAxes();
+            updateSolutionEquation();
+        }
+
+        function updateChartTimeAxes() {
+            if (displacementChart) {
+                displacementChart.options.scales.x.max = historyMaxTime;
+                displacementChart.update('none');
+            }
+        }
+
+        function updateSpeedControls(autoSpeed) {
+            const clampedSpeed = Math.max(0.1, Math.min(5.0, autoSpeed));
+            speedMultiplier = clampedSpeed;
+
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            if (speedSlider && speedInput) {
+                speedSlider.value = clampedSpeed.toFixed(1);
+                speedInput.value = clampedSpeed.toFixed(1);
+            }
+        }
+
+        function updateSolutionEquation() {
+            const solutionElement = document.getElementById('specific-solution');
+            if (!solutionElement) return;
+
+            const ustStr = staticDeflection.toFixed(3);
+            const zetaOmegaN = (zeta * omega_n).toFixed(3);
+            const omegaDStr = (zeta < 1 ? omega_D.toFixed(3) : omega_n.toFixed(3));
+            const ratioStr = (zeta < 1 ? (zeta / Math.sqrt(1 - zeta * zeta)).toFixed(3) : '0');
+
+            if (zeta < 1) {
+                solutionElement.innerHTML = `$$u(t) = ${ustStr}\\left[1-e^{-${zetaOmegaN}t}` +
+                    `\\left(\\cos ${omegaDStr}t + ${ratioStr}\\sin ${omegaDStr}t\\right)\\right]$$`;
+            } else if (Math.abs(zeta - 1) < 1e-9) {
+                solutionElement.innerHTML = `$$u(t) = ${ustStr}\\left[1-(1+${omega_n.toFixed(3)}t)` +
+                    `e^{-${omega_n.toFixed(3)}t}\\right]$$`;
+            } else {
+                solutionElement.innerHTML = `$$u(t) = ${ustStr}\\left[1 - A e^{s_1 t} - B e^{s_2 t}\\right]` +
+                    `\\quad\\text{(overdamped, real roots }s_1, s_2\\text{)}$$`;
+            }
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([solutionElement]).catch(err => {
+                    console.error('MathJax error:', err);
+                });
+            }
+        }
+
+        // Initialize chart
+        function initCharts() {
+            const displacementCtx = document.getElementById('displacementChart').getContext('2d');
+            displacementChart = new Chart(displacementCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'u(t)',
+                            data: [],
+                            borderColor: '#0066cc',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Static line',
+                            data: [],
+                            borderColor: '#666',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Positive envelope',
+                            data: [],
+                            borderColor: '#ffa500',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Negative envelope',
+                            data: [],
+                            borderColor: '#ffa500',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [3, 3],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Undamped (zeta=0)',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [6, 3],
+                            fill: false,
+                            pointRadius: 0,
+                            hidden: false
+                        },
+                        {
+                            label: 'Heavily damped',
+                            data: [],
+                            borderColor: '#6f42c1',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            borderDash: [2, 2],
+                            fill: false,
+                            pointRadius: 0,
+                            hidden: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Time (s)' },
+                            min: 0,
+                            max: historyMaxTime
+                        },
+                        y: {
+                            title: { display: true, text: 'Displacement u (m)' }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Draw the step-force SDOF system (frame-and-damper style)
+        function drawSystem() {
+            if (!ctx || !canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width * 0.3;
+            const centerY = canvas.height / 2;
+            const response = stepResponse(totalTime, zeta, omega_n, staticDeflection);
+            const maxDisp = zeta < 1 ? umax : staticDeflection * 1.1;
+            const scale = Math.min(200, (canvas.width * 0.55) / Math.max(maxDisp, 0.001));
+            const massX = centerX + response * scale;
+
+            // Fixed wall (left side)
+            const wallX = 40;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(wallX - 10, centerY - 50, 20, 100);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(wallX - 10, centerY - 50 + i * 10);
+                ctx.lineTo(wallX - 20, centerY - 40 + i * 10);
+                ctx.stroke();
+            }
+
+            // Spring
+            const springY = centerY - 12;
+            const springLeft = wallX + 10;
+            const springRight = massX - 20;
+            const springSegments = 8;
+            const springLength = Math.max(springRight - springLeft, 10);
+            const segmentLength = springLength / springSegments;
+
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(springLeft, springY);
+            for (let i = 0; i < springSegments; i++) {
+                const x = springLeft + i * segmentLength;
+                const amplitude = (i % 2 === 0) ? 10 : -10;
+                ctx.lineTo(x + segmentLength / 2, springY + amplitude);
+                ctx.lineTo(x + segmentLength, springY);
+            }
+            ctx.lineTo(springRight, springY);
+            ctx.stroke();
+
+            // Damper
+            const damperY = centerY + 12;
+            const damperLeft = wallX + 10;
+            const damperRight = massX - 20;
+            const damperMid = (damperLeft + damperRight) / 2;
+
+            ctx.fillStyle = '#999';
+            ctx.fillRect(damperMid - 13, damperY - 7, 26, 14);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(damperMid - 13, damperY - 7, 26, 14);
+
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(damperLeft, damperY);
+            ctx.lineTo(damperMid - 13, damperY);
+            ctx.moveTo(damperMid + 13, damperY);
+            ctx.lineTo(damperRight, damperY);
+            ctx.stroke();
+
+            // Mass
+            const massSize = 36;
+            ctx.fillStyle = '#4a90e2';
+            ctx.fillRect(massX - massSize / 2, centerY - massSize / 2, massSize, massSize);
+            ctx.strokeStyle = '#2c5aa0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(massX - massSize / 2, centerY - massSize / 2, massSize, massSize);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('m', massX, centerY + 4);
+
+            // Static-deflection reference line
+            const ustX = centerX + staticDeflection * scale;
+            ctx.strokeStyle = '#00aa00';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(ustX, centerY - 55);
+            ctx.lineTo(ustX, centerY + 55);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Applied step force (constant for t >= 0)
+            if (totalTime >= 0) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.fillStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                const arrowY = centerY;
+                const arrowStartX = massX + massSize / 2 + 10;
+                const arrowEndX = arrowStartX + 35;
+                ctx.beginPath();
+                ctx.moveTo(arrowStartX, arrowY);
+                ctx.lineTo(arrowEndX, arrowY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(arrowEndX, arrowY);
+                ctx.lineTo(arrowEndX - 12, arrowY - 7);
+                ctx.lineTo(arrowEndX - 12, arrowY + 7);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('P₀ (applied at t=0)', 10, 20);
+            ctx.fillText(`u(t) = ${(response * 1000).toFixed(1)} mm`, 10, 35);
+            ctx.fillText(`t = ${totalTime.toFixed(2)} s`, canvas.width - 90, 20);
+            ctx.font = '10px Arial';
+            ctx.fillText('k', springLeft + springLength / 2 - 5, springY - 16);
+            ctx.fillText('c', damperMid - 5, damperY - 16);
+            ctx.fillText('u_st', ustX - 10, centerY - 60);
+        }
+
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                timeStep = baseTimeStep * speedMultiplier;
+                totalTime += timeStep;
+                time += timeStep;
+
+                if (totalTime > historyMaxTime) {
+                    isPlaying = false;
+                    return;
+                }
+
+                const totalResp = stepResponse(totalTime, zeta, omega_n, staticDeflection);
+                const envelopes = calculateEnvelope(totalTime);
+                const undampedResp = stepResponse(totalTime, 0, omega_n, staticDeflection);
+                const heavyResp = stepResponse(totalTime, HEAVY_ZETA, omega_n, staticDeflection);
+
+                timeData.push(totalTime);
+                totalResponseData.push(totalResp);
+                staticLineData.push(staticDeflection);
+                positiveEnvelopeData.push(envelopes.positive);
+                negativeEnvelopeData.push(envelopes.negative);
+                undampedData.push(undampedResp);
+                heavyDampedData.push(heavyResp);
+
+                if (displacementChart) {
+                    displacementChart.data.labels = [...timeData];
+                    displacementChart.data.datasets[0].data = [...totalResponseData];
+                    displacementChart.data.datasets[1].data = [...staticLineData];
+                    displacementChart.data.datasets[2].data = [...positiveEnvelopeData];
+                    displacementChart.data.datasets[3].data = [...negativeEnvelopeData];
+                    displacementChart.data.datasets[4].data = [...undampedData];
+                    displacementChart.data.datasets[4].hidden = !showUndamped;
+                    displacementChart.data.datasets[5].data = [...heavyDampedData];
+                    displacementChart.data.datasets[5].hidden = !showHeavy;
+                    displacementChart.update('none');
+                }
+
+                drawSystem();
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+
+        // Reset animation
+        function resetAnimation() {
+            time = 0;
+            totalTime = 0;
+            timeData = [];
+            totalResponseData = [];
+            staticLineData = [];
+            positiveEnvelopeData = [];
+            negativeEnvelopeData = [];
+            undampedData = [];
+            heavyDampedData = [];
+
+            if (!isPlaying) {
+                isPlaying = true;
+                animate();
+            }
+
+            if (displacementChart) {
+                displacementChart.data.labels = [];
+                displacementChart.data.datasets.forEach(ds => ds.data = []);
+                displacementChart.update();
+            }
+
+            drawSystem();
+        }
+
+        // Parameter controls
+        function setupControl(paramId, valueId, callback) {
+            const slider = document.getElementById(paramId);
+            const input = document.getElementById(valueId);
+            if (!slider || !input) return;
+
+            function updateValue(value) {
+                slider.value = value;
+                input.value = value;
+                callback(parseFloat(value));
+                updateDisplays();
+                resetAnimation();
+            }
+
+            slider.addEventListener('input', (e) => updateValue(e.target.value));
+            input.addEventListener('input', (e) => updateValue(e.target.value));
+        }
+
+        function setupControls() {
+            setupControl('damping-ratio', 'damping-ratio-value', (value) => zeta = value);
+            setupControl('natural-period', 'natural-period-value', (value) => naturalPeriod = value);
+            setupControl('static-deflection', 'static-deflection-value', (value) => staticDeflection = value);
+
+            const speedSlider = document.getElementById('speed');
+            const speedInput = document.getElementById('speed-value');
+            if (speedSlider && speedInput) {
+                function updateSpeed(value) {
+                    speedMultiplier = parseFloat(value);
+                    speedSlider.value = value;
+                    speedInput.value = value;
+                }
+                speedSlider.addEventListener('input', (e) => updateSpeed(e.target.value));
+                speedInput.addEventListener('input', (e) => updateSpeed(e.target.value));
+            }
+
+            const undampedCheckbox = document.getElementById('show-undamped');
+            if (undampedCheckbox) {
+                undampedCheckbox.addEventListener('change', (e) => {
+                    showUndamped = e.target.checked;
+                    if (displacementChart) {
+                        displacementChart.data.datasets[4].hidden = !showUndamped;
+                        displacementChart.update('none');
+                    }
+                });
+            }
+
+            const heavyCheckbox = document.getElementById('show-heavy');
+            if (heavyCheckbox) {
+                heavyCheckbox.addEventListener('change', (e) => {
+                    showHeavy = e.target.checked;
+                    if (displacementChart) {
+                        displacementChart.data.datasets[5].hidden = !showHeavy;
+                        displacementChart.update('none');
+                    }
+                });
+            }
+
+            const restartBtn = document.getElementById('restart-btn');
+            if (restartBtn) {
+                restartBtn.addEventListener('click', () => {
+                    resetAnimation();
+                });
+            }
+        }
+
+        // Setup chart visibility controls
+        function setupChartVisibility() {
+            const setupVisibility = (checkboxId, datasetIndex) => {
+                const checkbox = document.getElementById(checkboxId);
+                if (checkbox && displacementChart) {
+                    checkbox.addEventListener('change', (e) => {
+                        displacementChart.data.datasets[datasetIndex].hidden = !e.target.checked;
+                        displacementChart.update();
+                    });
+                }
+            };
+
+            setupVisibility('show-total-response', 0);
+            setupVisibility('show-static-line', 1);
+
+            const envelopeCheckbox = document.getElementById('show-envelope');
+            if (envelopeCheckbox && displacementChart) {
+                envelopeCheckbox.addEventListener('change', (e) => {
+                    displacementChart.data.datasets[2].hidden = !e.target.checked;
+                    displacementChart.data.datasets[3].hidden = !e.target.checked;
+                    displacementChart.update();
+                });
+            }
+        }
+
+        // Initialize app
+        function initializeApp() {
+            try {
+                canvas = document.getElementById('animationCanvas');
+                if (!canvas) throw new Error('Canvas not found');
+
+                const resizeCanvas = () => {
+                    const container = canvas.parentElement;
+                    const rect = container.getBoundingClientRect();
+                    const h2Height = container.querySelector('h2').offsetHeight;
+
+                    canvas.width = rect.width - 20;
+                    canvas.height = Math.min(rect.height - h2Height - 20, 180);
+                };
+
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                ctx = canvas.getContext('2d');
+
+                initCharts();
+                calculateSystemParams();
+                updateDisplays();
+                setupControls();
+                setupChartVisibility();
+                drawSystem();
+                animate();
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
+
+        // Wait for Chart.js to load
+        let chartLoaded = false;
+        let pageLoaded = false;
+
+        function checkAndInit() {
+            if (chartLoaded && pageLoaded) {
+                initializeApp();
+            }
+        }
+
+        function checkChartJs() {
+            if (typeof Chart !== 'undefined') {
+                chartLoaded = true;
+                checkAndInit();
+            } else {
+                setTimeout(checkChartJs, 100);
+            }
+        }
+
+        window.addEventListener('load', function() {
+            pageLoaded = true;
+            checkAndInit();
+        });
+
+        checkChartJs();
+    </script>
+</body>
+</html>
